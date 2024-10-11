@@ -1,0 +1,103 @@
+/* 正文文本大小，会默认使用浏览器的字体大小设置 */
+/* body {
+  font-size: 14px;
+}
+html {
+  font-size: 14px;
+} */
+
+.vp-doc h2 {
+  font-size: 1.6em;
+  /* font-size: 22px; */
+}
+
+.vp-doc p {
+  /* line-height: 24px; */
+  line-height: 1.5em;
+}
+
+:root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: -webkit-linear-gradient(
+    120deg,
+    #bd34fe 30%,
+    #41d1ff
+  );
+
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    #bd34fe 50%,
+    #47caff 50%
+  );
+  --vp-home-hero-image-filter: blur(44px);
+
+  /* 代码块行高，默认 1.7em */
+  --vp-code-line-height: 1.475em;
+  /* --vp-code-line-height: 20px; */
+  /* --vp-code-font-size: 0.875em; */
+  /* --vp-code-font-size: 0.825em; */
+}
+
+/* 宽度大于 640px 时生效 */
+@media (min-width: 640px) {
+  :root {
+    --vp-home-hero-image-filter: blur(56px);
+  }
+}
+
+/* 宽度大于 960px 时生效 */
+@media (min-width: 960px) {
+  :root {
+    --vp-home-hero-image-filter: blur(64px);
+  }
+}
+
+/* sidebar 相关 */
+:root {
+  --vp-sidebar-width: 240px;
+}
+.Layout .VPSidebar {
+  padding-right: 12px;
+}
+@media (min-width: 960px) {
+  .Layout .group {
+    padding-top: 10px;
+    width: calc(var(--vp-sidebar-width) - 48px);
+  }
+  .Layout .VPNavBar.has-sidebar .title {
+    padding-right: 16px;
+  }
+}
+
+/* 正文最大宽度，默认 688px
+   https://developer.mozilla.org/zh-CN/docs/Web/CSS/Specificity
+   选择器更具体，就有更高的优先级
+*/
+.VPContent .VPDoc.has-aside .content-container {
+  max-width: 800px;
+}
+.container .content {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.VPDoc.has-sidebar.has-aside {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* 代码块 padding-left 改为 8px */
+.vp-doc [class*="language-"] code {
+  padding-left: 8px;
+}
+/* 对于带 diff 的代码块，仍然保持 24px */
+.vp-doc [class*="language-"] .has-diff code {
+  padding-left: 24px;
+}
+/* 代码块上下距离 */
+.vp-doc [class*="language-"] pre {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.vp-doc .line-numbers-wrapper {
+  padding-top: 8px;
+}
