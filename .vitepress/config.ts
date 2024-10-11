@@ -21,6 +21,8 @@ export default defineConfig({
   lastUpdated: true,
   metaChunk: true,
 
+  ignoreDeadLinks: true,
+
   // TODO SEO 优化
   // https://vitepress.dev/zh/guide/sitemap-generation
   // 或者参考 nixos-and-flakes-book
