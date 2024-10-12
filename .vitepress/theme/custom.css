@@ -58,6 +58,7 @@ html {
 }
 .Layout .VPSidebar {
   padding-right: 12px;
+  padding-bottom: 12px;
 }
 @media (min-width: 960px) {
   .Layout .group {
@@ -67,6 +68,11 @@ html {
   .Layout .VPNavBar.has-sidebar .title {
     padding-right: 16px;
   }
+}
+
+.VPSidebarItem.level-1 .text {
+  padding-top: 2px;
+  padding-bottom: 2px;
 }
 
 /* 正文最大宽度，默认 688px

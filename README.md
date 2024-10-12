@@ -1,36 +1,102 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Vercel
 
-## Getting Started
+https://vercel.com/
 
-First, run the development server:
+建议把博客托管在 Vercel 上面，和 GitHub Pages 一样的每月 100G 带宽限制，但管理起来更方便，一键部署，有数据统计等等各种功能。个人版免费，加钱支持团队协作。
+
+## 模板
+
+https://vercel.com/docs/frameworks
+
+比较好看的有：
+
+- VitePress https://vitepress.dev/zh/
+  专门用来写文档用的，中文搜索的支持很好。
+- Next.js https://nextjs.org/
+  这个更全能，用来写文档也太复杂了。。。
+
+## 本地部署
+
+https://vercel.com/docs/deployments/local-env
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 安装到了 ~/.local/share/fnm/node-versions/v20.17.0/installation/bin/
+npm install -g vercel
+# 安装 package.json 里的所有依赖
+npm install
+
+# https://vercel.com/docs/cli
+vercel dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.vercelignore`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`.env.local`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+vercel.json
+https://vercel.com/docs/projects/project-configuration
 
-## Learn More
+## VitePress
 
-To learn more about Next.js, take a look at the following resources:
+https://vitepress.dev/zh/
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# -D 表明是开发环境下的依赖
+❯ npm add -D vitepress
+# 修改 package.json 后，更新依赖
+❯ npm update -D vitepress
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-## Deploy on Vercel
+❯ npx vitepress init
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+┌  Welcome to VitePress!
+│
+◇  Where should VitePress initialize the config?
+│  ./
+│
+◇  Site title:
+│  Blog
+│
+◇  Site description:
+│  My Blog
+│
+◇  Theme:
+│  Default Theme
+│
+◇  Use TypeScript for config and theme files?
+│  Yes
+│
+◇  Add VitePress npm scripts to package.json?
+│  Yes
+│
+└  Done! Now run npm run docs:dev and start writing.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Tips:
+- Make sure to add .vitepress/dist and .vitepress/cache to your .gitignore file.
+
+❯ npm run docs:dev
+
+> docs:dev
+> vitepress dev
+
+
+  vitepress v1.3.4
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  press h to show help
+
+```
+
+HTTP 缓存标头
+https://vitepress.dev/zh/guide/deploy#http-cache-headers
+https://vercel.com/docs/concepts/projects/project-configuration#headers
+
+##
+
+在同一目录管理多个项目
+https://vercel.com/docs/monorepos
+
+## TODO
+
+https://vercel.com/integrations/slack/new

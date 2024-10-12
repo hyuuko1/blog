@@ -1,3 +1,7 @@
+# TODO node, zone 的概念, 物理内存布局
+
+- [Physical Memory — The Linux Kernel documentation](https://docs.kernel.org/mm/physical_memory.html)
+
 # `struct pglist_data`
 
 `struct pglist_data` 描述了一个内存节点。都记录在了 node_data 数组内。
@@ -91,5 +95,3 @@ struct zone {
   struct per_cpu_zonestat __percpu *per_cpu_zonestats;
 };
 ```
-
-## TODO 先学明白，再来写这个笔记！！
