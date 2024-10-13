@@ -35,7 +35,7 @@ features:
   - title: 容器
     link: /
     details: Docker, k8s, Kata
-  - title: Trace/Profie/Debug
+  - title: Trace/Debug
     link: /
     details:
   - title: Interrupt

@@ -9,7 +9,9 @@
 
 1. 内存相关的系统调用、/proc、/sys
 
-## TODO 服务器体系(SMP，NUMA，MPP)与共享存储器架构(UMA 和 NUMA)
+## 学习方法
+
+- [如何展开 Linux Memory Management 学习？ - ArnoldLu - 博客园](https://www.cnblogs.com/arnoldlu/p/7977847.html)
 
 ## Linux 内存管理概述
 
@@ -115,10 +117,14 @@ Linux 把物理内存划分为三个层次来管理
 - [内存管理\_bin_linux96 的专栏-CSDN 博客](https://blog.csdn.net/bin_linux96/category_7457811.html)
 - [linux 内存\_菁的博客-CSDN 博客](https://blog.csdn.net/u010923083/category_10971696.html)
 - 🌟 [内存管理 | Kernel Exploring](https://richardweiyang-2.gitbook.io/kernel-exploring/nei-cun-guan-li)
-- 🌟 bin 的技术小屋 https://www.zhihu.com/column/c_1550511492654600192
+- 🌟 [bin 的技术小屋 - 知乎](https://www.zhihu.com/column/c_1550511492654600192)
+  长文，很多图
 - 🌟 https://github.com/gatieme/LDD-LinuxDeviceDrivers/tree/master/study/kernel/02-memory
   **建议看这个！！**
+- 🌟 [Linux 内存管理专题 - ArnoldLu - 博客园](https://www.cnblogs.com/arnoldlu/p/8051674.html)
+  内容多，而且讲的很容易懂
 - http://www.biscuitos.cn/blog/BiscuitOS_Catalogue/
+- [tolimit - 博客园](https://www.cnblogs.com/tolimit)
 
 ## 其他
 
@@ -130,3 +136,4 @@ Linux 把物理内存划分为三个层次来管理
 ## TODO
 
 - memremap
+- 服务器体系(SMP，NUMA，MPP)与共享存储器架构(UMA 和 NUMA)

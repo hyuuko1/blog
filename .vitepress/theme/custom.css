@@ -1,10 +1,10 @@
-/* 正文文本大小，会默认使用浏览器的字体大小设置 */
-/* body {
-  font-size: 14px;
+/* 正文文本大小，使用浏览器的字体大小设置 */
+body {
+  font-size: initial;
 }
 html {
-  font-size: 14px;
-} */
+  font-size: initial;
+}
 
 .vp-doc h2 {
   font-size: 1.6em;
@@ -32,7 +32,7 @@ html {
   --vp-home-hero-image-filter: blur(44px);
 
   /* 代码块行高，默认 1.7em */
-  --vp-code-line-height: 1.475em;
+  --vp-code-line-height: 1.45em;
   /* --vp-code-line-height: 20px; */
   /* --vp-code-font-size: 0.875em; */
   /* --vp-code-font-size: 0.825em; */
@@ -60,6 +60,31 @@ html {
   padding-right: 12px;
   padding-bottom: 12px;
 }
+
+.VPLocalNav .VPLocalNavOutlineDropdown {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.VPLocalNav .menu {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+/* 这是为了在宽度 >1280 后，正文的上下位置不变 */
+.VPContent .VPDoc {
+  padding-top: 7px;
+}
+@media (min-width: 1280px) {
+  .VPContent .VPDoc {
+    padding-top: 48px;
+  }
+
+  /* 右侧目录 */
+  .VPDoc .aside {
+    padding-left: 16px;
+    max-width: 240px;
+  }
+}
+
 @media (min-width: 960px) {
   .Layout .group {
     padding-top: 10px;
@@ -71,11 +96,12 @@ html {
 }
 
 .VPSidebarItem .text {
+  font-size: 0.875em;
   line-height: 1.5em;
 }
 
 /* https://sotoolbox.com/archives/11043.html
-   https://developer.mozilla.org/zh-CN/docs/Web/CSS/::-webkit-scrollbar*/
+   https://developer.mozilla.org/zh-CN/docs/Web/CSS/::-webkit-scrollbar */
 /* 隐藏侧边栏滚动条 */
 .Layout .VPSidebar::-webkit-scrollbar {
   width: 0.3rem; /* 设置滚动条宽度 */
@@ -106,13 +132,16 @@ html {
   background-color: #d3d3d3;
   -webkit-border-radius: 6px; /* 圆角 */
 }
+::-webkit-scrollbar-thumb:hover {
+  background-color: #bbbbbb;
+}
 
 /* 正文最大宽度，默认 688px
    https://developer.mozilla.org/zh-CN/docs/Web/CSS/Specificity
    选择器更具体，就有更高的优先级
 */
 .VPContent .VPDoc.has-aside .content-container {
-  max-width: 800px;
+  max-width: 1000px;
 }
 .container .content {
   padding-left: 12px;
@@ -138,4 +167,14 @@ html {
 }
 .vp-doc .line-numbers-wrapper {
   padding-top: 8px;
+}
+
+/* 代码 copy 按钮。防止单行代码时出现滚动条 */
+.vp-doc [class*="language-"] > button.copy {
+  width: 20px;
+  height: 20px;
+  top: 8px;
+  right: 8px;
+  border: initial;
+  border-radius: initial;
 }

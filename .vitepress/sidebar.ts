@@ -42,7 +42,7 @@ export function sidebar(): DefaultTheme.Sidebar {
     },
     "/irq/": {
       base: "/irq/",
-      items: sidebarIrq(),
+      items: sidebarIRQ(),
     },
     "/debug/": {
       base: "/debug/",
@@ -85,10 +85,10 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
           text: "pfn_to_page() 的原理：mem_section 与 vmemmap",
           link: "vmemmap",
         },
+        { text: "rmap 反向映射", link: "rmap" },
         { text: "🚧 page fault", link: "pagefault" },
         { text: "🚧 page table", link: "page_table" },
         { text: "🚧 mmap", link: "mmap" },
-        { text: "🚧 rmap 反响映射", link: "rmap" },
         { text: "🚧 ioremap", link: "ioremap" },
         { text: "🚧 fixmap", link: "fixmap" },
         { text: "🚧 highmem 高端内存", link: "highmem" },
@@ -96,7 +96,7 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
         { text: "🚧 GFP (Get Free Page)", link: "gfp" },
         { text: "🚧 CoW (Copy on Write)", link: "cow" },
         { text: "🚧 THP (Transparent Huge Page) 动态大页", link: "thp" },
-        { text: "🚧 userfaultfd", link: "userfaultfd" },
+        { text: "🚧 UFFD (userfaultfd)", link: "uffd" },
         { text: "🚧 share memory", link: "shmem" },
         { text: "🚧 mlock", link: "mlock" },
         { text: "🚧 tlb", link: "tlb" },
@@ -115,7 +115,7 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
         { text: "🚧 页面回收和交换", link: "swap" },
         { text: "🚧 内存压缩", link: "compaction" },
         { text: "🚧 页面迁移", link: "migration" },
-        { text: "🚧 OOM (Out Of Memory) Killer", link: "oom" },
+        { text: "OOM (Out Of Memory) Killer", link: "oom" },
         { text: "🚧 KSM (Kernel Samepage Merging)", link: "ksm" },
         { text: "🚧 hotplug", link: "hotplug" },
         { text: "🚧 virtio mem", link: "virtio_mem" },
@@ -169,11 +169,19 @@ function sidebarStorage(): DefaultTheme.SidebarItem[] {
 function sidebarVirtualization(): DefaultTheme.SidebarItem[] {
   return [
     {
-      text: "TCP/IP",
+      text: "QEMU-KVM",
       collapsed: false,
       items: [
-        { text: "收包流程", link: "rx" },
-        { text: "发包流程", link: "tx" },
+        { text: "事件循环", link: "mainloop" },
+        { text: "内存虚拟化", link: "mm" },
+      ],
+    },
+    {
+      text: "VFIO",
+      collapsed: false,
+      items: [
+        { text: "vfio-pci", link: "vfio-pci" },
+        { text: "vfio-mdev", link: "vfio-mdev" },
       ],
     },
   ];
@@ -182,24 +190,24 @@ function sidebarVirtualization(): DefaultTheme.SidebarItem[] {
 function sidebarProcess(): DefaultTheme.SidebarItem[] {
   return [
     {
-      text: "TCP/IP",
+      text: "调度",
       collapsed: false,
       items: [
-        { text: "收包流程", link: "rx" },
-        { text: "发包流程", link: "tx" },
+        { text: "CFS", link: "CFS" },
+        { text: "EEVDF", link: "EEVDF" },
       ],
     },
   ];
 }
 
-function sidebarIrq(): DefaultTheme.SidebarItem[] {
+function sidebarIRQ(): DefaultTheme.SidebarItem[] {
   return [
     {
-      text: "TCP/IP",
+      text: "Linux IRQ",
       collapsed: false,
       items: [
-        { text: "收包流程", link: "rx" },
-        { text: "发包流程", link: "tx" },
+        { text: "Linux IRQ", link: "irq" },
+        { text: "MSI-X", link: "msix" },
       ],
     },
   ];
@@ -208,12 +216,18 @@ function sidebarIrq(): DefaultTheme.SidebarItem[] {
 function sidebarDebug(): DefaultTheme.SidebarItem[] {
   return [
     {
-      text: "TCP/IP",
+      text: "Debug",
       collapsed: false,
       items: [
-        { text: "收包流程", link: "rx" },
-        { text: "发包流程", link: "tx" },
+        { text: "Tips & Tricks", link: "tips" },
+        { text: "vscode + gdb 调试 Linux 内核", link: "vscode-gdb" },
+        { text: "GDB 用法", link: "gdb" },
       ],
+    },
+    {
+      text: "Tracing",
+      collapsed: false,
+      items: [],
     },
   ];
 }
