@@ -70,9 +70,41 @@ html {
   }
 }
 
-.VPSidebarItem.level-1 .text {
-  padding-top: 2px;
-  padding-bottom: 2px;
+.VPSidebarItem .text {
+  line-height: 1.5em;
+}
+
+/* https://sotoolbox.com/archives/11043.html
+   https://developer.mozilla.org/zh-CN/docs/Web/CSS/::-webkit-scrollbar*/
+/* 隐藏侧边栏滚动条 */
+.Layout .VPSidebar::-webkit-scrollbar {
+  width: 0.3rem; /* 设置滚动条宽度 */
+  background-color: transparent;
+}
+/* 隐藏滚动条滑块 */
+.Layout .VPSidebar::-webkit-scrollbar-thumb {
+  background-color: transparent;
+}
+/* 隐藏滚动条轨道 */
+.Layout .VPSidebar::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+/* 显示滚动条 */
+.Layout .VPSidebar:hover::-webkit-scrollbar-thumb {
+  background-color: #d0d0d0; /* 设置滚动条滑块颜色 */
+}
+/* 显示滚动条轨道 */
+.Layout .VPSidebar:hover::-webkit-scrollbar-track {
+  background-color: #eeeeee; /* 设置滚动条轨道颜色 */
+}
+
+::-webkit-scrollbar {
+  height: 0.5rem;
+  width: 0.5rem;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #d3d3d3;
+  -webkit-border-radius: 6px; /* 圆角 */
 }
 
 /* 正文最大宽度，默认 688px
