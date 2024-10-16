@@ -4,6 +4,11 @@ https://vercel.com/
 
 - [《VitePress 简易速速上手小册》](https://blog.csdn.net/qq_41340258/category_12581692.html)
 - [VuePress 博客搭建系列 33 篇正式完结！ · Issue #279 · mqyqingfeng/Blog](https://github.com/mqyqingfeng/Blog/issues/279)
+- [第三次重构个人博客（基于 Vitepress） | Justin3go](https://justin3go.com/posts/2024/07/30-third-reconstruction-personal-blog-vitepress)
+
+speed insights 和 analytics 都需要安装一些包
+https://vercel.com/docs/speed-insights/quickstart
+https://vercel.com/docs/analytics/quickstart
 
 ## 模板
 
@@ -35,7 +40,7 @@ https://vitepress.dev/zh/
 ```bash
 # -D 表明是开发环境下的依赖
 ❯ npm add -D vitepress
-# 修改 package.json 后，更新依赖
+# 修改 package.json 里的版本号后，更新依赖
 ❯ npm update -D vitepress
 
 #

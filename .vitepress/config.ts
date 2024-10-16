@@ -32,11 +32,21 @@ export default defineConfig({
     ],
     ["meta", { property: "og:url", content: "https://hyuuko.vercel.app" }],
 
+    // 百度 https://ziyuan.baidu.com/site/index
+    // google https://search.google.com/search-console?resource_id=https%3A%2F%2Fhyuuko.vercel.app
     [
       "meta",
       {
         name: "google-site-verification",
         content: "OMML6xlbLb2Asitovo85pbOZGTvYoWaYWYW3ps7083s",
+      },
+    ],
+    // bing
+    [
+      "meta",
+      {
+        name: "msvalidate.01",
+        content: "E3B108A75866D6C18B16BE35E14DE820",
       },
     ],
   ],
@@ -56,24 +66,21 @@ export default defineConfig({
     ]);
   },
 
+  /* SEO 优化
+  https://www.kyoudesu.com/note/vitepress/%E6%8F%90%E5%8D%87%20VitePress%20%E7%B6%B2%E7%AB%99%20SEO%20%E7%9A%84%E5%BB%BA%E8%AD%B0.html
+  https://github.com/mqyqingfeng/Blog/issues/279
+  https://vitepress.dev/zh/guide/sitemap-generation
+  可以参考 nixos-and-flakes-book */
   sitemap: {
     hostname: "https://hyuuko.vercel.app",
-    transformItems: (items) => {
+    /* transformItems: (items) => {
       return items.map((item) => {
         return Object.assign({}, item, {
           changefreq: "daily",
           priority: 1.0,
         });
       });
-
-      // 添加新项目或修改/筛选现有选项
-      // items.push({
-      //   url: "/extra-page",
-      //   changefreq: "monthly",
-      //   priority: 0.8,
-      // });
-      // return items;
-    },
+    }, */
   },
 
   // remove trailing `.html`
@@ -83,11 +90,6 @@ export default defineConfig({
   metaChunk: true,
 
   ignoreDeadLinks: true,
-
-  // TODO SEO 优化
-  // https://github.com/mqyqingfeng/Blog/issues/279
-  // https://vitepress.dev/zh/guide/sitemap-generation
-  // 或者参考 nixos-and-flakes-book
 
   markdown: {
     config: (md) => {
