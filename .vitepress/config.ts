@@ -31,6 +31,14 @@ export default defineConfig({
       },
     ],
     ["meta", { property: "og:url", content: "https://hyuuko.vercel.app" }],
+
+    [
+      "meta",
+      {
+        name: "google-site-verification",
+        content: "OMML6xlbLb2Asitovo85pbOZGTvYoWaYWYW3ps7083s",
+      },
+    ],
   ],
   // head: [['link', { rel: 'icon', href: '/linux-256x256.png' }]],
 
