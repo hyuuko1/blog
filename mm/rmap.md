@@ -1,3 +1,11 @@
+---
+description: rmap 反向映射原理，代码分析
+head:
+  - - meta
+    - name: keywords
+      content: rmap, 反向映射, linux, kernel, 原理, 代码分析
+---
+
 # rmap 反向映射
 
 ## 参考

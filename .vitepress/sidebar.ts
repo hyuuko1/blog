@@ -71,6 +71,7 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
       text: "描述物理内存",
       collapsed: false,
       items: [
+        { text: "内存布局", link: "layout" },
         { text: "e820", link: "e820" },
         { text: "node, zone", link: "node" },
         { text: "🚧 struct page", link: "page" },
@@ -86,6 +87,7 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
           link: "vmemmap",
         },
         { text: "rmap 反向映射", link: "rmap" },
+        { text: "🚧 vma", link: "vma" },
         { text: "🚧 page fault", link: "pagefault" },
         { text: "🚧 page table", link: "page_table" },
         { text: "🚧 mmap", link: "mmap" },

@@ -1,13 +1,38 @@
-# memory management
+# 内存管理专题
 
-这个系列主要记录：
+更新计划
 
-1. 参考资料
-2. 内存管理主要特性
-
-内存管理系列笔记，会记录：
-
-1. 内存相关的系统调用、/proc、/sys
+1. [ ] 内存布局
+2. 内存分配
+   - [ ] vmalloc, vmap
+   - [ ] buddy system 分配物理页面
+   - [ ] kmalloc：SLUB
+   - [ ] CMA
+3. 进程地址空间
+   1. [ ] VMA
+   2. [ ] mmap
+   3. [ ] cow
+4. page cache
+   1. [ ] readahead
+   2. [ ] writeback
+5. 大页
+   1. [ ] hugetlb
+   2. [ ] THP
+6. 内存不足
+   1. [x] OOM
+   2. [x] rmap
+   3. [ ] 内存回收 reclaim
+   4. [ ] 内存规整 compaction
+   5. [ ] 内存迁移 migrate
+   6. [ ] KSM
+   7. [ ] swap
+   8. [ ] zram
+   9. [ ] zswap
+7. [ ] 内存热插拔
+8. [ ] mm cgroup
+9. 暂时不考虑
+   1. highmem，在 x86_64 里没有
+   2. 非易失性内存
 
 ## 学习方法
 
@@ -92,20 +117,6 @@ Linux 把物理内存划分为三个层次来管理
     2. HWPoison - 内存页错误的处理 2.6.32(2009 年 12 月发布)
     3. Cross Memory Attach - 进程间快速消息传递 3.2(2012 年 1 月发布)
 
-## 这个系列讲什么？
-
-1. 物理内存管理
-   内存模块具有一定层次结构的，从物理内存到软件控制的内存经过了几个层次的隔离。
-   大致我们能看到这么四个层次的内存管理结构。前两者基本在内核启动时使用，而平时大多使用的是后两者。
-   1. [](./e820.md) e820 从硬件获取内存分布
-   2. [](./memblock.md) 原始内存分配器--memblock
-   3. 页分配器
-   4. Slub 分配器
-2. 虚拟内存管理
-3. 高级特性
-   1. 页面回收
-   2. 大页
-
 ## 参考资料
 
 - 《奔跑吧 Linux 内核 第二版卷一》由浅入深，适合入门，涉及的内容也很多
@@ -126,14 +137,210 @@ Linux 把物理内存划分为三个层次来管理
 - http://www.biscuitos.cn/blog/BiscuitOS_Catalogue/
 - [tolimit - 博客园](https://www.cnblogs.com/tolimit)
 
-## 其他
+## 代码函数统计
 
-- 外碎片：还没有被分配出去的空闲页面，可以满足当前申请的长度要求，但是由于它们的地址不连续或其他原因，使得系统无法满足当前申请
-  - 伙伴系统，主要为了解决外碎片的问题。为了满足对连续大的页框的需求。
-- 内碎片：已经被操作系统分配给进程的内存区域，但是占有该区域的进程无法使用该区域里的部分内存。例子：申请的内存不是对齐的，产生的多余空间就是内部碎片。
-  - slab 算法
+<details>
 
-## TODO
+<summary>总计 198,813</summary>
 
-- memremap
-- 服务器体系(SMP，NUMA，MPP)与共享存储器架构(UMA 和 NUMA)
+```bash
+$ tokei mm -f -s lines -t C,'C Header'
+===============================================================================
+ Language                    Files      Lines       Code   Comments     Blanks
+===============================================================================
+ C                             161     192763     122995      43351      26417
+-------------------------------------------------------------------------------
+ mm/hugetlb.c                            7683       4772       1905       1006
+ mm/vmscan.c                             7598       4494       1813       1291
+ mm/slub.c                               7445       4980       1305       1160
+ mm/page_alloc.c                         7143       4226       1923        994
+ mm/memory.c                             6925       4412       1760        753
+ mm/memcontrol.c                         5448       3441       1175        832
+ mm/shmem.c                              5376       3943        780        653
+ mm/vmalloc.c                            5212       3130       1291        791
+ mm/filemap.c                            4459       2518       1441        500
+ mm/huge_memory.c                        4226       3041        615        570
+ mm/swapfile.c                           4035       3160        487        388
+ mm/ksm.c                                3845       2461        924        460
+ mm/gup.c                                3718       2076       1211        431
+ mm/mempolicy.c                          3561       2384        738        439
+ mm/percpu.c                             3406       1920       1044        442
+ mm/compaction.c                         3357       1916        937        504
+ mm/page-writeback.c                     3237       1719       1138        380
+ mm/memcontrol-v1.c                      3088       2145        542        401
+ mm/memory-failure.c                     2831       1738        751        342
+ mm/khugepaged.c                         2814       1948        529        337
+ mm/rmap.c                               2765       1538        911        316
+ mm/migrate.c                            2713       1718        662        333
+ mm/mm_init.c                            2675       1705        566        404
+ mm/memblock.c                           2435       1340        775        320
+ mm/memory_hotplug.c                     2434       1422        654        358
+ mm/vmstat.c                             2335       1589        400        346
+ mm/mmap.c                               2326       1470        524        332
+ mm/damon/sysfs-schemes.c                2309       1809        120        380
+ mm/zsmalloc.c                           2307       1517        399        391
+ mm/kmemleak.c                           2253       1352        616        285
+ mm/damon/core.c                         2222       1499        418        305
+ mm/vma.c                                2068       1174        624        270
+ mm/kasan/kasan_test_c.c                 2044       1338        285        421
+ mm/userfaultfd.c                        1933       1306        382        245
+ mm/damon/sysfs.c                        1885       1414        171        300
+ mm/nommu.c                              1807       1151        390        266
+ mm/zswap.c                              1767       1073        430        264
+ mm/madvise.c                            1548       1097        255        196
+ mm/z3fold.c                             1447       1032        232        183
+ mm/debug_vm_pgtable.c                   1400        956        219        225
+ mm/slab_common.c                        1330        837        297        196
+ mm/oom_kill.c                           1261        755        350        156
+ mm/kfence/core.c                        1260        753        290        217
+ mm/util.c                               1237        679        396        162
+ mm/backing-dev.c                        1220        896        119        205
+ mm/mremap.c                             1186        757        267        162
+ mm/damon/dbgfs.c                        1148        901         74        173
+ mm/swap.c                               1108        612        351        145
+ mm/mmu_notifier.c                       1099        609        378        112
+ mm/memory-tiers.c                        995        597        270        128
+ mm/page_owner.c                          974        707        104        163
+ mm/migrate_device.c                      965        581        261        123
+ mm/swap_state.c                          940        611        219        110
+ mm/sparse.c                              939        638        171        130
+ mm/hugetlb_cgroup.c                      933        729         85        119
+ mm/mprotect.c                            915        623        171        121
+ mm/pagewalk.c                            858        563        209         86
+ mm/kfence/kfence_test.c                  855        595        131        129
+ mm/workingset.c                          843        370        385         88
+ mm/truncate.c                            841        440        316         85
+ mm/highmem.c                             825        520        188        117
+ mm/mlock.c                               822        558        140        124
+ mm/shrinker.c                            809        520        163        126
+ mm/readahead.c                           806        406        319         81
+ mm/damon/vaddr.c                         735        514        118        103
+ mm/hugetlb_vmemmap.c                     721        393        228        100
+ mm/kmsan/kmsan_test.c                    717        484        134         99
+ mm/kasan/report.c                        681        456        118        107
+ mm/page_io.c                             652        488         88         76
+ mm/page_isolation.c                      642        301        275         66
+ mm/kasan/shadow.c                        631        356        178         97
+ mm/mempool.c                             616        361        188         67
+ mm/list_lru.c                            614        463         59         92
+ mm/hmm.c                                 609        419        116         74
+ mm/cma.c                                 604        381        128         95
+ mm/kasan/generic.c                       583        405         78        100
+ mm/numa_memblks.c                        571        317        170         84
+ mm/numa_emulation.c                      571        357        137         77
+ mm/kasan/common.c                        561        352         98        111
+ mm/page_ext.c                            551        342        131         78
+ mm/damon/paddr.c                         541        423         26         92
+ mm/memremap.c                            530        356        104         70
+ mm/dmapool.c                             524        338        110         76
+ mm/kasan/init.c                          504        391         28         85
+ mm/vmpressure.c                          481        236        194         51
+ mm/sparse-vmemmap.c                      478        342         68         68
+ mm/mmu_gather.c                          471        276        125         70
+ mm/page_counter.c                        463        198        213         52
+ mm/show_mem.c                            455        367         39         49
+ mm/zbud.c                                455        225        180         50
+ mm/kmsan/hooks.c                         439        324         71         44
+ mm/memfd.c                               424        286         78         60
+ mm/page_reporting.c                      417        214        132         71
+ mm/kasan/quarantine.c                    414        263         84         67
+ mm/percpu-vm.c                           410        201        161         48
+ mm/kasan/hw_tags.c                       405        240         96         69
+ mm/kasan/report_generic.c                399        281         51         67
+ mm/gup_test.c                            395        324          9         62
+ mm/kmsan/core.c                          394        296         59         39
+ mm/pgtable-generic.c                     382        258         87         37
+ mm/zpool.c                               355        144        173         38
+ mm/swap_slots.c                          353        227         85         41
+ mm/shmem_quota.c                         351        249         54         48
+ mm/page_vma_mapped.c                     348        217        101         30
+ mm/damon/reclaim.c                       344        201         90         53
+ mm/damon/lru_sort.c                      340        209         74         57
+ mm/mapping_dirty_helpers.c               339        166        136         37
+ mm/kmsan/instrumentation.c               334        215         77         42
+ mm/kfence/report.c                       331        227         56         48
+ mm/kmsan/shadow.c                        310        236         31         43
+ mm/process_vm_access.c                   305        188         82         35
+ mm/debug.c                               302        244         21         37
+ mm/early_ioremap.c                       297        223         28         46
+ mm/secretmem.c                           295        215         18         62
+ mm/page_table_check.c                    285        214         19         52
+ mm/mincore.c                             283        182         72         29
+ mm/shrinker_debug.c                      279        217          5         57
+ mm/usercopy.c                            277        160         79         38
+ mm/mseal.c                               268        134         97         37
+ mm/balloon_compaction.c                  250        124        100         26
+ mm/kmsan/init.c                          238        153         58         27
+ mm/percpu-stats.c                        235        157         40         38
+ mm/swap_cgroup.c                         233        159         42         32
+ mm/maccess.c                             230        143         56         31
+ mm/fadvise.c                             229        144         52         33
+ mm/page_idle.c                           221        160         33         28
+ mm/kmsan/report.c                        221        171         29         21
+ mm/cma_debug.c                           197        150          7         40
+ mm/ptdump.c                              187        137          9         41
+ mm/shuffle.c                             182        101         54         27
+ mm/kasan/sw_tags.c                       176        113         36         27
+ mm/dmapool_test.c                        148        122          0         26
+ mm/kasan/tags.c                          148        104         17         27
+ mm/execmem.c                             143        108         11         24
+ mm/memtest.c                             137        111          4         22
+ mm/percpu-km.c                           130         76         30         24
+ mm/bootmem_info.c                        128         82         22         24
+ mm/cma_sysfs.c                           127         98          6         23
+ mm/damon/ops-common.c                    121         76         22         23
+ mm/hwpoison-inject.c                     114         75         15         24
+ mm/msync.c                               114         77         32          5
+ mm/mmzone.c                              113         75         20         18
+ mm/mmap_lock.c                           111         77         14         20
+ mm/interval_tree.c                       111         88          7         16
+ mm/kasan/report_tags.c                   107         52         35         20
+ mm/damon/sysfs-common.c                  107         75          9         23
+ mm/page_poison.c                         105         79          8         18
+ mm/kasan/report_sw_tags.c                 95         61         18         16
+ mm/folio-compat.c                         94         75          5         14
+ mm/kasan/kasan_test_module.c              81         51         11         19
+ mm/failslab.c                             76         53          8         15
+ mm/ioremap.c                              74         52         11         11
+ mm/kasan/report_hw_tags.c                 71         38         22         11
+ mm/numa.c                                 69         52          5         12
+ mm/fail_page_alloc.c                      69         53          2         14
+ mm/init-mm.c                              57         41         11          5
+ mm/debug_page_ref.c                       55         46          1          8
+ mm/rodata_test.c                          52         32         12          8
+ mm/debug_page_alloc.c                     51         40          1         10
+ mm/damon/modules-common.c                 42         24         11          7
+ mm/io-mapping.c                           29         13         12          4
+-------------------------------------------------------------------------------
+ C Header                       24       6050       3887       1200        963
+-------------------------------------------------------------------------------
+ mm/internal.h                           1446        816        430        200
+ mm/slab.h                                696        481        119         96
+ mm/kasan/kasan.h                         661        440         85        136
+ mm/vma.h                                 558        376         96         86
+ mm/damon/tests/core-kunit.h              541        393         57         91
+ mm/damon/tests/vaddr-kunit.h             324        191         93         40
+ mm/percpu-internal.h                     288        162         80         46
+ mm/swap.h                                209        162         15         32
+ mm/kmsan/kmsan.h                         188         99         59         30
+ mm/damon/tests/dbgfs-kunit.h             173        128         11         34
+ mm/memcontrol-v1.h                       159        106         16         37
+ mm/kfence/kfence.h                       146         63         56         27
+ mm/damon/tests/sysfs-kunit.h              86         61          6         19
+ mm/hugetlb_vmemmap.h                      77         51         16         10
+ mm/damon/sysfs-common.h                   67         40          9         18
+ mm/cma.h                                  58         47          5          6
+ mm/mm_slot.h                              55         39          7          9
+ mm/shuffle.h                              53         44          2          7
+ mm/page_reporting.h                       53         33         13          7
+ mm/pgalloc-track.h                        51         42          1          8
+ mm/vma_internal.h                         49         37          7          5
+ mm/damon/modules-common.h                 49         36          6          7
+ mm/gup_test.h                             45         32          5          8
+ mm/damon/ops-common.h                     18          8          6          4
+===============================================================================
+ Total                         185     198813     126882      44551      27380
+===============================================================================
+```
+
+</details>

@@ -6,8 +6,8 @@ titleTemplate: "主页"
 
 hero:
   name: "Notes"
-  text: "linux kernel / qemu"
-  tagline: My great project tagline
+  text: "linux kernel, qemu"
+  tagline: 一些内核知识
   image:
     src: /linux.svg
     alt: VitePress

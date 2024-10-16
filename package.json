@@ -5,7 +5,12 @@
     "build": "vitepress build",
     "preview": "vitepress preview"
   },
+  "devDependencies": {
+    "vitepress": "^1.4.1"
+  },
   "dependencies": {
-    "vitepress": "^1.4.0"
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-task-lists": "^2.1.1",
+    "vitepress-plugin-comment-with-giscus": "^1.1.15"
   }
 }
