@@ -229,7 +229,7 @@ function sidebarDebug(): DefaultTheme.SidebarItem[] {
     {
       text: "Tracing",
       collapsed: false,
-      items: [],
+      items: [{ text: "bpftrace 用法", link: "bpf/bpftrace" }],
     },
   ];
 }

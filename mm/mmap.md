@@ -1,5 +1,10 @@
 # mmap
 
+## 参考
+
+- [从内核世界透视 mmap 内存映射的本质（原理篇） - 知乎](https://zhuanlan.zhihu.com/p/656876044)
+- [从内核世界透视 mmap 内存映射的本质（源码实现篇） - 知乎](https://zhuanlan.zhihu.com/p/660439213)
+
 ## 私有匿名页
 
 ```cpp

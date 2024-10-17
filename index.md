@@ -38,9 +38,9 @@ features:
   - title: Trace/Debug
     link: /
     details:
-  - title: Interrupt
+  - title: 设备与中断
     link: /irq
-    details: hardirq, softirq, tasklet, workqueue, MSI-X, APIC, GICv4
+    details: device/driver/bus, hardirq, softirq, tasklet, workqueue, MSI-X, APIC, GICv4
   - title: Booting
     link: /
     details: SeaBIOS, edk2, Linux Boot Process

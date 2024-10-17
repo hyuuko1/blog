@@ -2,12 +2,12 @@
 
 更新计划
 
-1. [ ] 内存布局
-2. 内存分配
+1. 内存分配
    - [ ] vmalloc, vmap
    - [ ] buddy system 分配物理页面
    - [ ] kmalloc：SLUB
    - [ ] CMA
+2. [ ] 内存布局
 3. 进程地址空间
    1. [ ] VMA
    2. [ ] mmap
@@ -119,9 +119,9 @@ Linux 把物理内存划分为三个层次来管理
 
 ## 参考资料
 
-- 《奔跑吧 Linux 内核 第二版卷一》由浅入深，适合入门，涉及的内容也很多
-- [内存管理 - 标签 - LoyenWang - 博客园](https://www.cnblogs.com/LoyenWang/tag/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/) 有许多配图，非常棒！
-- [兰新宇 - 知乎](https://zhuanlan.zhihu.com/p/93289632) 非常推荐，会介绍演进/优化历史，不侧重代码
+- 🌟《奔跑吧 Linux 内核 第二版卷一》由浅入深，适合入门，涉及的内容也很多
+- 🌟[内存管理 - 标签 - LoyenWang - 博客园](https://www.cnblogs.com/LoyenWang/tag/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/) 有许多配图，非常棒！
+- 🌟[兰新宇 - 知乎](https://zhuanlan.zhihu.com/p/93289632) 非常推荐，会介绍演进/优化历史，不侧重代码
 - [五花肉 - 知乎](https://zhuanlan.zhihu.com/p/610256038) 有很多高级特性的分析
 - [内存管理 - 蜗窝科技](http://www.wowotech.net/sort/memory_management)
 - [内存管理\_HZero-CSDN 博客](https://blog.csdn.net/jasonactions/category_10652690.html?spm=1001.2014.3001.5482) 有许多配图，非常棒！
@@ -129,9 +129,8 @@ Linux 把物理内存划分为三个层次来管理
 - [linux 内存\_菁的博客-CSDN 博客](https://blog.csdn.net/u010923083/category_10971696.html)
 - 🌟 [内存管理 | Kernel Exploring](https://richardweiyang-2.gitbook.io/kernel-exploring/nei-cun-guan-li)
 - 🌟 [bin 的技术小屋 - 知乎](https://www.zhihu.com/column/c_1550511492654600192)
-  长文，很多图
+  长文，很多图。**建议看这个！！**
 - 🌟 https://github.com/gatieme/LDD-LinuxDeviceDrivers/tree/master/study/kernel/02-memory
-  **建议看这个！！**
 - 🌟 [Linux 内存管理专题 - ArnoldLu - 博客园](https://www.cnblogs.com/arnoldlu/p/8051674.html)
   内容多，而且讲的很容易懂
 - http://www.biscuitos.cn/blog/BiscuitOS_Catalogue/

@@ -41,7 +41,7 @@ export default defineConfig({
         content: "OMML6xlbLb2Asitovo85pbOZGTvYoWaYWYW3ps7083s",
       },
     ],
-    // bing
+    // bing https://www.bing.com/webmasters?siteUrl=https%3A%2F%2Fhyuuko.vercel.app
     [
       "meta",
       {
