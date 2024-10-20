@@ -103,16 +103,17 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
         { text: "🚧 mlock", link: "mlock" },
         { text: "🚧 tlb", link: "tlb" },
         { text: "🚧 hugetlb", link: "hugetlb" },
+        { text: "🚧 dma-buf", link: "dma_buf" },
       ],
     },
     {
       text: "内存分配",
       collapsed: false,
       items: [
+        { text: "vmalloc: 不连续物理内存分配与 vmap", link: "vmalloc" },
         { text: "🚧 早期内存分配器 memblock", link: "memblock" },
         { text: "🚧 SLUB 内存分配器", link: "slub" },
         { text: "🚧 Buddy System 伙伴系统", link: "buddy" },
-        { text: "🚧 vmalloc", link: "vmalloc" },
         { text: "🚧 CMA 连续内存分配", link: "cma" },
         { text: "🚧 页面回收和交换", link: "swap" },
         { text: "🚧 内存压缩", link: "compaction" },

@@ -134,7 +134,7 @@ sparse_init()
 
 mem_section 最初的作用是支持 `pfn_to_page()`，后面出现 `CONFIG_SPARSEMEM_VMEMMAP` 这一方案后，在初始化 mem_section、为 struct page 分配内存时，会顺便建立起 vmemmap 区域的映射，此后 `pfn_to_page()` 不需要 mem_section 的参与。（虽然也可以通过 `sparse_decode_mem_map()` 得到 struct page，但没 vmemmap 高效。）
 
-## 或许可以水个 patch
+## 可以水个 patch 吗
 
 `__section_mem_map_addr` 在未启用 `CONFIG_SPARSEMEM_VMEMMAP` 时用不到。
 

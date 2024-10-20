@@ -42,6 +42,7 @@ export default defineConfig({
       },
     ],
     // bing https://www.bing.com/webmasters?siteUrl=https%3A%2F%2Fhyuuko.vercel.app
+    // https://www.bing.com/webmasters/help/webmasters-guidelines-30fba23a
     [
       "meta",
       {
@@ -152,7 +153,7 @@ export default defineConfig({
     },
 
     // TODO: 加一个 mailto
-    socialLinks: [{ icon: "github", link: "https://github.com/hyuuko1" }],
+    socialLinks: [{ icon: "github", link: "https://github.com/hyuuko1/blog" }],
 
     footer: {
       message: "Licensed under MIT",

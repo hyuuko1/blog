@@ -1,0 +1,23 @@
+{
+  "[markdown]": {
+    // "editor.wordWrap": "off",
+    "editor.detectIndentation": false,
+    "editor.tabSize": 8, /* C 代码块，tab 大小 8 */
+    // "editor.indentSize": 2,
+    "editor.indentSize": 8,
+    // "editor.insertSpaces": true,
+    "editor.insertSpaces": false,
+  },
+  "[c]": {
+    "editor.detectIndentation": false,
+    "editor.tabSize": 8,
+    "editor.indentSize": 8,
+    "editor.insertSpaces": false,
+  },
+  "[cpp]": {
+    "editor.detectIndentation": false,
+    "editor.tabSize": 8,
+    "editor.indentSize": 8,
+    "editor.insertSpaces": false,
+  },
+}

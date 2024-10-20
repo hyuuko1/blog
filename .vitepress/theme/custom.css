@@ -152,9 +152,10 @@ html {
   padding-right: 12px;
 }
 
-/* 代码块 padding-left 改为 8px */
+/* 代码块 padding-left 改为 8px，制表符大小 8 */
 .vp-doc [class*="language-"] code {
   padding-left: 8px;
+  tab-size: 8;
 }
 /* 对于带 diff 的代码块，仍然保持 24px */
 .vp-doc [class*="language-"] .has-diff code {
