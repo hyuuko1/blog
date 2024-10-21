@@ -111,7 +111,7 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
       collapsed: false,
       items: [
         { text: "vmalloc: 不连续物理内存分配与 vmap", link: "vmalloc" },
-        { text: "er-cpu 变量的静态和动态分配", link: "percpu" },
+        { text: "per-cpu 变量的静态和动态分配", link: "percpu" },
         { text: "🚧 早期内存分配器 memblock", link: "memblock" },
         { text: "🚧 SLUB 内存分配器", link: "slub" },
         { text: "🚧 Buddy System 伙伴系统", link: "buddy" },

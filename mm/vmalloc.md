@@ -99,7 +99,7 @@ struct vmap_area {
 
 /* 管理虚拟地址和物理页之间的关系 */
 struct vm_struct {
-	struct vm_struct	*next;		/* 串成一个单向链表 */
+	struct vm_struct	*next;		/* XXX 串成一个单向链表，干啥的？ */
 	void			*addr;
 	unsigned long		size;
 	unsigned long		flags;

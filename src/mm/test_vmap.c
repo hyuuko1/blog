@@ -1,8 +1,6 @@
-#include "linux/gfp.h"
-#include "linux/mm.h"
-#include "linux/printk.h"
-#include <linux/module.h>
 #include <linux/vmalloc.h>
+#include <linux/mm.h>
+#include <linux/module.h>
 
 MODULE_DESCRIPTION("Simple module");
 MODULE_AUTHOR("Kernel Hacker");

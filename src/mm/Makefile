@@ -1,6 +1,6 @@
 ccflags-y = -Wno-unused-function -Wno-unused-label -Wno-unused-variable -DDEBUG
 
-obj-m	:= test_vmap.o
+obj-m	:= test_vmap.o test_percpu.o
 
 KDIR	:= /data/os-code/linux/out/x86_64
 PWD	:= $(shell pwd)
