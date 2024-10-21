@@ -73,7 +73,7 @@ sudo bpftrace -e 'kfunc:vmlinux:__vmalloc_node_range_noprof  { @[kstack] = count
 
 ```cpp
 static LIST_HEAD(free_vmap_area_list);
-/* 空闲的 vmalloc 区域 */
+/* 空闲的未被使用的 vmalloc 区域 */
 static struct rb_root free_vmap_area_root = RB_ROOT;
 
 /* 用于描述一段虚拟地址的区域 */
@@ -82,9 +82,9 @@ struct vmap_area {
 	unsigned long va_end;
 
 	/* 属于以下 3 个红黑树之一：
-	   - free_vmap_area_root。表明还未分配出去？
-	   - vmap_node 的 busy。表明已被分配出去
-	   - vmap_node 的 lazy。表明正在 lazy 释放的阶段？
+	   - free_vmap_area_root。表明未被使用的区域。
+	   - vmap_node 的 busy。表明已被分配，正在被使用
+	   - vmap_node 的 lazy。表明该区域未被使用，处于正在 lazy 释放的阶段。
 	 */
 	struct rb_node rb_node;
 	/* 同 rb_node，属于 3 个链表之一，free_vmap_area_list、busy、lazy */
@@ -112,17 +112,14 @@ struct vm_struct {
 	const void		*caller;
 };
 
-
-/*
-  定义在 mm/vmalloc.c 里
- */
+/* 该结构体用于大锁化小锁，降低锁争用，后文会分析 */
 static struct vmap_node {
 	/* Simple size segregated storage. */
 	struct vmap_pool pool[MAX_VA_SIZE_PAGES];
 	spinlock_t pool_lock;
 	bool skip_populate;
 
-	/*  */
+	/* 已经被分配，正在被使用的 vmap_area */
 	struct rb_list busy;
 	/* vunmap 的 vmap_area 会先挂在这颗红黑树上，等待被释放 */
 	struct rb_list lazy;
@@ -150,9 +147,9 @@ vmap()
       /* 否则从 slab 分配 */
       if (!va) va = kmem_cache_alloc_node(vmap_area_cachep);
       /* 如果不是从 vmap_pool 分配的，还需要这一步分配一个虚拟地址出来  */
-      __alloc_vmap_area() /* TODO 这个还没分析 */
-      	find_vmap_lowest_match()
-	va_alloc()
+      __alloc_vmap_area()
+      	find_vmap_lowest_match() /* 深度遍历红黑树，得到合适的 va（并没有从红黑树中取下） */
+	va_alloc()->va_clip() /* 修改红黑树中的那个 va，剪掉我们要使用的那一段区域 */
       /* 将 vmap_area 放进 vmap_node 的 busy 红黑树和链表 */
       struct vmap_node *vn = addr_to_node(va->va_start);
   vmap_pages_range(area->addr, .., pages)
@@ -164,8 +161,6 @@ vmap()
 #### [\[patch\] mm: rewrite vmap layer - Nick Piggin](https://lore.kernel.org/linux-mm/20080818133224.GA5258@wotan.suse.de/)
 
 db64fe02258f1507e13fe5212a989922323685ce mm: rewrite vmap layer
-
-重写了 vmap
 
 存在的问题：
 
@@ -179,6 +174,8 @@ db64fe02258f1507e13fe5212a989922323685ce mm: rewrite vmap layer
 3. 对于小的 vmap，使用 per-cpu 的分配器，避免全局锁。
 
 #### [\[PATCH v3 00/11\] Mitigate a vmap lock contention v3 - Uladzislau Rezki (Sony)](https://lore.kernel.org/all/20240102184633.748113-1-urezki@gmail.com/)
+
+挑几个比较重要的进行分析。
 
 1. d093602919ad mm: vmalloc: remove global vmap_area_root rb-tree
 

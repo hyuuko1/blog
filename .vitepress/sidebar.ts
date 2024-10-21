@@ -97,7 +97,7 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
         { text: "🚧 GUP (Get User Page)", link: "gup" },
         { text: "🚧 GFP (Get Free Page)", link: "gfp" },
         { text: "🚧 CoW (Copy on Write)", link: "cow" },
-        { text: "🚧 THP (Transparent Huge Page) 动态大页", link: "thp" },
+        { text: "🚧 THP (Transparent Huge Page) 透明大页", link: "thp" },
         { text: "🚧 UFFD (userfaultfd)", link: "uffd" },
         { text: "🚧 share memory", link: "shmem" },
         { text: "🚧 mlock", link: "mlock" },
@@ -111,6 +111,7 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
       collapsed: false,
       items: [
         { text: "vmalloc: 不连续物理内存分配与 vmap", link: "vmalloc" },
+        { text: "er-cpu 变量的静态和动态分配", link: "percpu" },
         { text: "🚧 早期内存分配器 memblock", link: "memblock" },
         { text: "🚧 SLUB 内存分配器", link: "slub" },
         { text: "🚧 Buddy System 伙伴系统", link: "buddy" },
@@ -131,7 +132,7 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
       collapsed: false,
       items: [
         { text: "🚧 readahead 预读", link: "../storage/readahead" },
-        { text: "🚧 page cache", link: "../storage/page_cache" },
+        { text: "🚧 page cache", link: "../storage/pagecache" },
         { text: "🚧 page writeback", link: "../storage/page_writeback" },
         { text: "🚧 tmpfs", link: "../storage/tmpfs" },
         { text: "🚧 ramfs", link: "../storage/ramfs" },
@@ -159,7 +160,7 @@ function sidebarStorage(): DefaultTheme.SidebarItem[] {
       text: "Linux 内核文件系统",
       collapsed: false,
       items: [
-        { text: "🚧 page cache", link: "page_cache" },
+        { text: "🚧 page cache", link: "pagecache" },
         { text: "🚧 readahead 预读", link: "readahead" },
         { text: "🚧 VFS", link: "vfs" },
         { text: "🚧 tmpfs", link: "tmpfs" },
