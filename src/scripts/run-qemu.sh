@@ -64,7 +64,7 @@ SCRIPTS_DIR=$(dirname $0)
 if [ ! -f /tmp/rq.flag ]; then
     sudo chmod 777 /dev/hugepages/
 
-    sudo sh $SCRIPTS_DIR/run-qemu-nat.sh
+    sudo sh $SCRIPTS_DIR/setup-network.sh
 
     touch /tmp/rq.flag
 fi

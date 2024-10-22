@@ -13,11 +13,11 @@ hero:
     alt: VitePress
   actions:
     - theme: brand
+      text: README
+      link: /README
+    - theme: alt
       text: Markdown Examples
       link: /markdown-examples
-    - theme: alt
-      text: API Examples
-      link: /api-examples
 
 features:
   - title: 内存管理
@@ -39,12 +39,12 @@ features:
     link: /
     details:
   - title: 设备与中断
-    link: /irq
+    link: /
     details: device/driver/bus, hardirq, softirq, tasklet, workqueue, MSI-X, APIC, GICv4
   - title: Booting
     link: /
     details: SeaBIOS, edk2, Linux Boot Process
   - title: Programming Language
     link: /
-    details: Haskell, Rust, Go, Zig
+    details: Rust, Go, Zig
 ---

@@ -1,6 +1,3 @@
-#include "asm/page_types.h"
-#include "linux/percpu.h"
-#include "linux/printk.h"
 #include <linux/module.h>
 
 MODULE_DESCRIPTION("Simple module");
