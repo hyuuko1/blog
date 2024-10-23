@@ -1,0 +1,57 @@
+<domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
+  <name>alpine</name>
+  <memory unit='GiB'>8</memory>
+  <currentMemory unit='GiB'>8</currentMemory>
+  <vcpu placement='static'>4</vcpu>
+  <cputune>
+    <vcpupin vcpu='0' cpuset='0' />
+    <vcpupin vcpu='1' cpuset='1' />
+    <vcpupin vcpu='2' cpuset='2' />
+    <vcpupin vcpu='3' cpuset='3' />
+  </cputune>
+
+  <cpu mode='host-passthrough' check='none' migratable='on'>
+    <topology sockets='2' dies='1' clusters='1' cores='2' threads='1' />
+    <cache mode='passthrough' />
+    <numa>
+      <cell id="0" cpus="0-1" memory="4" unit="GiB" />
+      <cell id="1" cpus="2-3" memory="4" unit="GiB" />
+    </numa>
+  </cpu>
+
+  <os>
+    <type arch='x86_64' machine='q35'>hvm</type>
+    <kernel>/data/os-code/linux/out/x86_64/vmlinux</kernel>
+    <initrd>/data/VMs/alpine-minirootfs.img</initrd>
+    <cmdline>nokaslr selinux=0 audit=0 console=ttyS0</cmdline>
+  </os>
+  <features>
+    <acpi />
+    <apic />
+  </features>
+
+  <clock offset='utc'>
+    <timer name='rtc' tickpolicy='catchup' />
+    <timer name='pit' tickpolicy='delay' />
+    <timer name='hpet' present='no' />
+  </clock>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <pm>
+    <suspend-to-mem enabled='no' />
+    <suspend-to-disk enabled='no' />
+  </pm>
+  <devices>
+    <emulator>/usr/bin/qemu-system-x86_64</emulator>
+    <!-- 用于 virsh console -->
+    <serial type='pty'>
+      <target type='isa-serial' port='0'>
+        <model name='isa-serial' />
+      </target>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0' />
+    </console>
+  </devices>
+</domain>

@@ -10,6 +10,18 @@ html {
   font-size: 1.6em;
   /* font-size: 22px; */
 }
+.vp-doc h3 {
+  font-size: 1.4em;
+}
+.vp-doc h4 {
+  font-size: 1.2em;
+}
+.vp-doc h5 {
+  font-size: 1.1em;
+}
+.vp-doc h6 {
+  font-size: 1.0em;
+}
 
 .vp-doc p {
   /* line-height: 24px; */
