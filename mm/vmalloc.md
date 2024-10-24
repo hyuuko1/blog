@@ -226,7 +226,7 @@ db64fe02258f1507e13fe5212a989922323685ce mm: rewrite vmap layer
 
 最终都会调用到核心函数 `__vmalloc_node_range_noprof()`
 
-noprof 是指 no protection flags。protection flags 是指 `PAGE_KERNEL` 这种，
+关于 `_noprof` 见[buddy system](./buddy.md)。
 
 ```cpp
 __vmalloc_node_range_noprof

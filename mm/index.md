@@ -3,8 +3,9 @@
 更新计划
 
 1. 内存分配
-   - [ ] vmalloc, vmap
-   - [ ] buddy system 分配物理页面
+   - [x] vmalloc, vmap
+   - [x] percpu 分配器
+   - [ ] buddy system 物理页面分配器
    - [ ] kmalloc：SLUB
    - [ ] CMA
 2. [ ] 内存布局
@@ -12,13 +13,13 @@
    1. [ ] VMA
    2. [ ] mmap
    3. [ ] cow
-4. page cache
+4. 与文件系统相关的 page cache
    1. [ ] readahead
    2. [ ] writeback
-5. 大页
+5. 大页提升性能
    1. [ ] hugetlb
    2. [ ] THP
-6. 内存不足
+6. 内存不足时用的
    1. [x] OOM
    2. [x] rmap
    3. [ ] 内存回收 reclaim
