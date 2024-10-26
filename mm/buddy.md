@@ -2,9 +2,9 @@
 
 ## 参考
 
-- [一步一图带你深入理解 Linux 物理内存管理 - 知乎](https://zhuanlan.zhihu.com/p/585395024)
-- [深入理解 Linux 物理内存分配全链路实现 - 知乎](https://zhuanlan.zhihu.com/p/595356681)
-- [深度剖析 Linux 伙伴系统的设计与实现 - 知乎](https://zhuanlan.zhihu.com/p/603268284)
+1. [一步一图带你深入理解 Linux 物理内存管理 - 知乎](https://zhuanlan.zhihu.com/p/585395024)
+2. [深入理解 Linux 物理内存分配全链路实现 - 知乎](https://zhuanlan.zhihu.com/p/595356681)
+3. [深度剖析 Linux 伙伴系统的设计与实现 - 知乎](https://zhuanlan.zhihu.com/p/603268284)
 
 ## 概览
 
@@ -78,7 +78,7 @@ Node 1, zone   Normal           26         2020            2            0       
 
 ### 函数接口
 
-参数是 `order`，即，申请的内存只能是一整块，也就是 `2^order` 个连续页面。(`order` <= `MAX_PAGE_ORDER`)。
+参数是 `order`，即，**申请的内存只能是 `2^order` 个连续页面**， `0 <= order <= MAX_PAGE_ORDER`，因此因此可以申请的大小是 4KB ~ 4MB。
 
 写代码时，如果不要求连续内存，应优先多次 `alloc_page()` 分配多个分散的 0 阶页面。
 
@@ -136,7 +136,7 @@ typedef struct pglist_data {
 
 struct zone {
 	struct pglist_data	*zone_pgdat;
-	/* 一个优化。percpu 的链表，只保持 0 阶空闲块 */
+	/* 为了减少锁争用，用 percpu 的链表作为缓存池 */
 	struct per_cpu_pages	__percpu *per_cpu_pageset;
 	struct per_cpu_zonestat	__percpu *per_cpu_zonestats;
 
@@ -171,7 +171,7 @@ struct free_area {
 
 ## 代码分析
 
-### 分配内存
+### 分配页面
 
 核心函数是 `__alloc_pages_noprof()`。
 
@@ -181,12 +181,84 @@ struct free_area {
 struct page *__alloc_pages_noprof(gfp_t gfp, unsigned int order, int preferred_nid, nodemask_t *nodemask);
 ```
 
-在其之上的函数有：
+<details>
+
+<summary>来看看该函数的最频繁的几个调用方</summary>
+
+```bash
+$ sudo bpftrace -e 'kfunc:vmlinux:__alloc_pages_noprof  { @[kstack] = count(); }'
+...
+@[
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+1845
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+1845
+    bpf_trampoline_6442471747+79
+    __alloc_pages_noprof+9
+    alloc_pages_mpol_noprof+215
+    alloc_skb_with_frags+209
+    sock_alloc_send_pskb+503
+    unix_stream_sendmsg+381
+    __sys_sendto+513
+    __x64_sys_sendto+36
+    do_syscall_64+130
+    entry_SYSCALL_64_after_hwframe+118
+]: 156
+@[
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+1845
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+1845
+    bpf_trampoline_6442471747+79
+    __alloc_pages_noprof+9
+    alloc_pages_mpol_noprof+215
+    get_free_pages_noprof+17
+    tlb_next_batch+77
+    __tlb_remove_folio_pages+66
+    unmap_page_range+1873
+    zap_page_range_single+290
+    madvise_vma_behavior+2068
+    madvise_walk_vmas+202
+    do_madvise+368
+    __x64_sys_madvise+43
+    do_syscall_64+130
+    entry_SYSCALL_64_after_hwframe+118
+]: 388
+@[
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+1845
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+1845
+    bpf_trampoline_6442471747+79
+    __alloc_pages_noprof+9
+    alloc_pages_mpol_noprof+215
+    folio_alloc_mpol_noprof+20
+    shmem_alloc_folio+156
+    shmem_alloc_and_add_folio+182
+    shmem_get_folio_gfp+885
+    shmem_fallocate+944
+    vfs_fallocate+312
+    __x64_sys_fallocate+68
+    do_syscall_64+130
+    entry_SYSCALL_64_after_hwframe+118
+]: 512
+@[
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+1845
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+1845
+    bpf_trampoline_6442471747+79
+    __alloc_pages_noprof+9
+    alloc_pages_mpol_noprof+215
+    folio_alloc_mpol_noprof+20
+    vma_alloc_folio_noprof+105
+    do_anonymous_page+793
+    __handle_mm_fault+3047
+    handle_mm_fault+226
+    do_user_addr_fault+535
+    exc_page_fault+129
+    asm_exc_page_fault+38
+]: 2565
+```
+
+</details>
+
+调用它的函数有：
 
 ```cpp
-/* 分配连续的 order 阶物理页面。
-    mpol 是指 mempolicy
-    noprof 是指 no protection flags () */
+/* 分配连续的 order 阶物理页面。mpol 是指 mempolicy */
 struct page *alloc_pages_mpol_noprof(gfp_t gfp, unsigned int order,
 			struct mempolicy *pol, pgoff_t ilx, int nid);
 
@@ -199,7 +271,7 @@ unsigned long alloc_pages_bulk_noprof(gfp_t gfp, int preferred_nid,
 ...
 ```
 
-代码分析
+直接从 buddy system 分配页面需要加锁，cpu 一多，锁的争用就激烈了。因此用了 percpu 的链表作为缓存池。
 
 ```cpp
 __alloc_pages_noprof()
@@ -221,22 +293,24 @@ get_page_from_freelist()
     if (likely(pcp_allowed_order(order))) rmqueue_pcplist()
       list = &pcp->lists[order_to_pindex(migratetype, order)];
       __rmqueue_pcplist()
-    /* 否则从 zone->free_area 里的链表分配 */
+    /* 否则从 buddy system 分配 */
     else rmqueue_buddy()
+      spin_lock_irqsave(&zone->lock, flags); /* 需要加锁保护 */
       __rmqueue()->__rmqueue_smallest()
         for (current_order = order; current_order < NR_PAGE_ORDERS; ++current_order)
-	  area = &(zone->free_area[current_order]);
-	  page = get_page_from_free_area(area, migratetype);
+          area = &(zone->free_area[current_order]);
+          page = get_page_from_free_area(area, migratetype);
+      spin_unlock_irqrestore(&zone->lock, flags);
   prep_new_page(page, order, gfp_mask, alloc_flags);
     if (order && (gfp_flags & __GFP_COMP)) prep_compound_page(page, order);
 
-/* 慢速路径 */
+/* TODO 慢速路径 */
 __alloc_pages_slowpath()
 ```
 
 关于 `current_gfp_context()` 详见 [GFP (Get Free Page)](./gfp.md)
 
-### 释放内存
+### 释放页面
 
 ```cpp
 __free_pages()->free_unref_page()
@@ -252,6 +326,12 @@ __free_pages_ok()->free_one_page()
   split_large_buddy()
     /* TODO 为什么这里要限制 order 最大为 9，虽说这没什么问题（可以和伙伴合并成 10） */
     if (order > pageblock_order) order = pageblock_order;
+    __free_one_page()
+      struct page *buddy = find_buddy_page_pfn()
+      __del_page_from_free_list()
+      /* page->buddy_list 放入 zone->free_area[order].free_list[migratetype] 链表  */
+      __add_to_free_list()
+
 ```
 
 ### 伙伴系统初始化
@@ -270,13 +350,9 @@ mm_core_init()
 ## TODO
 
 - [ ] 梳理：各场景应使用哪种内存分配 API
-- [ ] page_order, MAX_ORDER, page_block
-      最大支持分配连续的 4MB 内存？
-      为什么释放时，为什么 要限制 order 最大为 pageblock_order。
-      pageblock_order 是什么？
+- [ ] pageblock_order 是什么？为什么释放时，为什么要限制 order 最大为 pageblock_order
 - [ ] `__folio_alloc_noprof` 加了个 `__GFP_COMP` 参数。
-      则会作用于 get_page_from_freelist->prep_new_page。
+      会作用于 get_page_from_freelist->prep_new_page。
       所以 folio 和 compound page 啥关系？
-- [ ] CONFIG_CMA
 - [ ] ALLOC_HIGHATOMIC
 - [ ] 慢速路径。内存规整、回收

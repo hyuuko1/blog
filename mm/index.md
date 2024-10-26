@@ -5,7 +5,7 @@
 1. 内存分配
    - [x] vmalloc, vmap
    - [x] percpu 分配器
-   - [ ] buddy system 物理页面分配器
+   - [x] buddy system 物理页面分配器
    - [ ] kmalloc：SLUB
    - [ ] CMA
 2. [ ] 内存布局
@@ -137,11 +137,11 @@ Linux 把物理内存划分为三个层次来管理
 - http://www.biscuitos.cn/blog/BiscuitOS_Catalogue/
 - [tolimit - 博客园](https://www.cnblogs.com/tolimit)
 
-## 代码函数统计
+## 代码行数统计
 
 <details>
 
-<summary>截至 v6.11.0 总计 198,813</summary>
+<summary>v6.11.0 总计 198,813 lines</summary>
 
 ```bash
 $ tokei mm -f -s lines -t C,'C Header'

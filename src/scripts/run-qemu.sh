@@ -63,10 +63,13 @@ SCRIPTS_DIR=$(dirname $0)
 
 if [ ! -f /tmp/rq.flag ]; then
     sudo chmod 777 /dev/hugepages/
+    # 为啥用 1G 大页启动虚拟机反而会变慢？
+    echo 8192 | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages >/dev/null
 
     sudo sh $SCRIPTS_DIR/setup-network.sh
 
     touch /tmp/rq.flag
+    echo "init done"
 fi
 
 ID=0
@@ -212,10 +215,10 @@ IOMMU_ARGS="
 "
 append_kernel_cmdline iommu=pt intel_iommu=on
 
-# 2 个 socket，每个 core 1 个 thread，最多 hot-plug 到 16 个
+# 2 个 socket，每个 core 2 个 thread，最多 hot-plug 到 16 个
 CPU_ARGS="
 -cpu host
--smp $CPUS,sockets=2,dies=1,clusters=1,threads=1,maxcpus=16
+-smp $CPUS,sockets=2,dies=1,clusters=1,threads=2,maxcpus=16
 "
 
 # TODO MEM_SIZE/2
@@ -224,8 +227,8 @@ MEM_ARGS="
 -m $MEM_SIZE
 -object memory-backend-file,id=ram-node0,size=4G,mem-path=/dev/hugepages,share=on,prealloc=off
 -object memory-backend-file,id=ram-node1,size=4G,mem-path=/dev/hugepages,share=on,prealloc=off
--numa node,nodeid=0,cpus=0,cpus=2,cpus=4,cpus=6,cpus=8,cpus=10,cpus=12,cpus=14,memdev=ram-node0
--numa node,nodeid=1,cpus=1,cpus=3,cpus=5,cpus=7,cpus=9,cpus=11,cpus=13,cpus=15,memdev=ram-node1
+-numa node,nodeid=0,cpus=0-1,cpus=4-9,memdev=ram-node0
+-numa node,nodeid=1,cpus=2-3,cpus=10-15,memdev=ram-node1
 "
 
 NET_ARGS+="
