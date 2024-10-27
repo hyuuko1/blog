@@ -65,44 +65,48 @@ int kmem_cache_shrink(struct kmem_cache *s);
   - active_slabs 一列展示的 slab cache 中活跃的 slab 个数。
   - nums_slabs 一列展示的是 slab cache 中管理的 slab 总数
 
+`/sys/kernel/slab/<cache_name>/` 是详细信息。
+
+`/sys/kernel/debug/slab`
+
 `/proc/meminfo` 的 Slab 一行，是 slab cache 占用的内存总量。
 
 `slabtop` 命令
+
+kernel cmdline
+slub_debug
 
 ## 数据结构
 
 ```cpp
 struct kmem_cache {
-	/* percpu slab 缓存 */
-	struct kmem_cache_cpu __percpu *cpu_slab;
+	struct kmem_cache_cpu __percpu *cpu_slab;	/* percpu slab 缓存 */
 
 	/* 用于设置 slab 的一些特性，比如：按照什么方式对齐，是否需要毒化等 */
 	slab_flags_t flags;
-	unsigned long min_partial;
+	unsigned long min_partial;	/* 控制每个 node 的 partial slab 数量 */
 	unsigned int size;		/* 对象真实大小，包含 read zone 等填充区域 */
 	unsigned int object_size;	/* 对象原始大小，不包含填充区域 */
 	struct reciprocal_value reciprocal_size;
 	unsigned int offset;		/* freepointer 在对象中的偏移 */
 
-	/* Number of per cpu partial objects to keep around */
-	unsigned int cpu_partial;
-	/* Number of per cpu partial slabs to keep around */
-	unsigned int cpu_partial_slabs;
+	unsigned int cpu_partial;	/* 控制每个 cpu 的 partial slab 里的空闲 object 数量 */
+	unsigned int cpu_partial_slabs;	/* 控制每个 cpu 的 partial slab 数量 */
 
 	/* 最优的阶数和对象数。高 16 位是物理页面阶数，低 16 位是能容纳的对象数。
 	   最优是指：slab 使用 oo>>16 个物理页面时，剩余没用到的空间最小，利用率最大 */
 	struct kmem_cache_order_objects oo;
-	/* slab 最少需要的物理页面的阶数，以及能容纳的对象数。内核最开始，
-	   会按照 oo 的阶数来向伙伴系统申请物理页面，长时间运行以后，内存碎片化，
-	   分配连续页很难成功，就会按 min 的阶数来申请，申请到的页面能容纳一个对象即可 */
+	/* slab 最少需要的物理页面的阶数（能容纳一个对象即可），以及能容纳的对象数。
+	   内核最开始，会按照 oo 的阶数来向伙伴系统申请物理页面，长时间运行以后，内存碎片化，
+	   分配连续页很难成功，就会按 min 的阶数来申请 */
 	struct kmem_cache_order_objects min;
 	gfp_t allocflags;		/* 每次分配物理页面时用的 flag */
-	int refcount;			/* Refcount for slab cache destroy */
+	int refcount;			/* kmem_cache 可能有别名的情况 */
 	void (*ctor)(void *object);	/* 对象的构造函数 */
 	/* object_size 按照 word size 对齐之后的大小，
 	   如果我们设置了SLAB_RED_ZONE，也会包括对象右侧 red zone 区域的大小 */
-	unsigned int inuse;		/* Offset to metadata */
-	unsigned int align;		/* Alignment */
+	unsigned int inuse;
+	unsigned int align;		/* object 对其 */
 	unsigned int red_left_pad;	/* 左侧 redzone 大小 */
 	const char *name;		/* /proc/slabinfo 的 name 那一列 */
 	struct list_head list;		/* 作为链表成员，挂在链表 slab_caches 上 */
@@ -118,30 +122,34 @@ struct kmem_cache {
 	struct kmem_cache_node *node[MAX_NUMNODES];
 };
 
-/* percpu slab 缓存 */
+/* per-cpu slab */
 struct kmem_cache_cpu {
 	union {
 		struct {
-			void **freelist;	/* 下一个可用 object 的地址，
-						   同时也是该 object 内的 freelist 指针的地址？ */
-			unsigned long tid;	/* 可以看作是 cpu 的 id */
+			/* 下一个可用 object 的地址，为什么是 ** ？ */
+			void **freelist;
+			/* 可以看作是 cpu 的 id。
+			如果被抢占，抢占前后 cpu 变了，这个可以用来判断 */
+			unsigned long tid;
 		};
 		freelist_aba_t freelist_tid;
 	};
-	struct slab *slab;	/* 我们正在从这个 slab 进行分配 */
-	struct slab *partial;	/* 一个 slab 链表，存放着“部分空闲”的 slab */
+	struct slab *slab;	/* 每次都是从这个 slab 分配 object */
+	/* 一个 slab 链表，存放着“部分空闲”的 slab。
+	如果 kmem_cache_cpu->slab 空了，就会从该链表中取出一个 slab */
+	struct slab *partial;
 	local_lock_t lock;	/* Protects the fields above */
 };
 
-/* per node */
+/* per-node slab */
 struct kmem_cache_node {
 	spinlock_t list_lock;
-	unsigned long nr_partial;	/* 部分空闲 slab 的数量 */
-	struct list_head partial;	/* 部分空闲的 slab */
+	unsigned long nr_partial;	/* node 内的“部分空闲”的 slab 的数量 */
+	struct list_head partial;	/* node 内的“部分空闲”的 slab 链表 */
 #ifdef CONFIG_SLUB_DEBUG
-	atomic_long_t nr_slabs;		/* slab 数量 */
-	atomic_long_t total_objects;	/* 对象总数 */
-	struct list_head full;		/*  */
+	atomic_long_t nr_slabs;		/* node 内的 slab 数量 */
+	atomic_long_t total_objects;	/* node 内的 object 总数 */
+	struct list_head full;		/* node 内的已经分配完毕的 slab 链表 */
 #endif
 };
 
@@ -152,13 +160,13 @@ struct slab {
 	/*  */
 	unsigned long __page_flags;
 
-	struct kmem_cache *slab_cache;
+	struct kmem_cache *slab_cache;	/* slab 所属的 kmem_cache */
 	union {
 		struct {
 			union {
-				/* 作为链表成员，挂在 kmem_cache_node 上？ */
+				/* 挂在 kmem_cache_node 的 partial 链表上 */
 				struct list_head slab_list;
-				/* 作为 kmem_cache_cpu 单向链表成员？ */
+				/* 挂在 kmem_cache_cpu 的 partial 单向链表上 */
 				struct {
 					struct slab *next;
 					int slabs;	/* Nr of slabs left */
@@ -173,12 +181,12 @@ struct slab {
 					union {
 						unsigned long counters;
 						struct {
-						/* 已分配对象的数量 */
+							/* 已分配对象的数量 */
 							unsigned inuse:16;
-						/* 对象的数量 */
+							/* 对象的数量 */
 							unsigned objects:15;
-						/* 如果在 percpu slab 缓存中，标记为冻结状态。
-						反之，处于 kmem_cache_node 的 partial 链表中 */
+							/* 如果在 kmem_cache_cpu 中，标记为冻结状态。
+							反之，处于 kmem_cache_node 的 partial 链表中 */
 							unsigned frozen:1;
 						};
 					};
@@ -187,8 +195,7 @@ struct slab {
 			};
 		};
 		/* 在创建内存缓存的时候，如果指定标志位 SLAB_TYPESAFE_BY_RCU，要求使用 RCU 延迟释放 slab，
-		在调用函数 call_rcu 把释放 slab 的函数加入 RCU 回调函数队列的时候，需要 rcu_head。
-		*/
+		在调用函数 call_rcu 把释放 slab 的函数加入 RCU 回调函数队列的时候，需要 rcu_head */
 		struct rcu_head rcu_head;
 	};
 
@@ -211,8 +218,8 @@ SLUB 分配器在创建内存缓存的时候计算了两种 slab 长度：最优
 
 1. 先从 percpu slab 缓存分配，如果当前有一个 slab 正在使用，并且有空闲对象，则分配。
 2. 否则，如果 percpu 的 partial 部分空闲链表不是空的，则取出第一个 slab，作为当前正在使用的 slab。
-3. 如果 partial 是空的。从当前 node 的的部分空闲链表取出 slab，重填 per cpu 的部分空闲 slab 链表。
-4. 如果当前 node 的部分空闲链表也是空的，则分配新的 slab。注意并不会从其他 node 拿。
+3. 如果 percpu partial slab 链表是空的。从当前 node 的的部分空闲链表取出 slab，重填 per cpu 的部分空闲 slab 链表。
+4. 如果当前 node 以及其他 node 的部分空闲链表也是空的，则从伙伴系统分配物理页面，分配新的 slab。
 
 `kmem_cache` 实例的成员 `remote_node_defrag_ratio` 称为远程节点反碎片比例，用来控制从远程节点借用部分空闲 slab 和从本地节点取部分空闲 slab 的比例，值越小，从本地节点取部分空闲 slab 的倾向越大。默认值是 1000，可以通过文件 `/sys/kernel/slab/<内存缓存名称>/remote_node_defrag_ratio` 设置某个内存缓存的远程节点反碎片比例，用户设置的范围是 [0, 100]，内存缓存保存的比例值是乘以 10 以后的值。
 
@@ -272,6 +279,116 @@ SLAB_POISON，毒化 slab，在对象内存区域填充特定字节表示对象�
 
 ### 初始化
 
+如果对象可能被拷贝到用户态，应使用 `kmem_cache_create_usercopy()` 函数，指定内核对象内存布局区域中 `useroffset` 到 `usersize` 的这段内存区域可以被复制到用户空间中，其他区域则不可以。例如，ptrace 系统调用访问当前进程的 `task_struct` 时，就会限制访问区域。
+
+`slab_state` 全局变量，表示 slab allocator 的初始化状态。
+
+#### slab allocator 体系的初始化
+
+内核第一个 kmem_cache 是如何被创建出来的？
+
+```cpp
+/* 初始化 struct kmem_cache * kmem_cache */
+start_kernel()->mm_core_init()->kmem_cache_init()
+  create_boot_cache("kmem_cache_node")->do_kmem_cache_create()
+  slab_state = PARTIAL;
+  create_boot_cache("kmem_cache")->do_kmem_cache_create()
+  kmem_cache = bootstrap(&boot_kmem_cache);
+  kmem_cache_node = bootstrap(&boot_kmem_cache_node);
+  setup_kmalloc_cache_index_table();	/* 初始化 kmalloc_size_index 数组 */
+  init_freelist_randomization();	/* 初始化 kmalloc_caches 二维数组 */
+  slab_state = UP;
+
+/* 要等 sysfs 存在之后，才能创建 /sys/kenerl/slab/，所以才 late_initcall() ? */
+late_initcall(slab_sysfs_init);
+  /* initcall 是在 1 号内核线程中执行的，因此存在竞态条件，需要加锁 */
+  mutex_lock(&slab_mutex);
+  slab_kset = kset_create_and_add("slab", NULL, kernel_kobj);
+  slab_state = FULL;
+  /* 将在此之前未放进 /sys/kernel/slab/ 的全放进去 */
+  list_for_each_entry(s, &slab_caches, list)
+    sysfs_slab_add()
+  while (alias_list)
+    sysfs_slab_alias()
+  mutex_unlock(&slab_mutex);
+```
+
+- [ ] 详细分析下 `kmem_cache_init()`
+
+#### kmem_cache 的创建
+
+```cpp
+/* 一个 kmem_cache_create_usercopy() 的例子 */
+fork_init()
+  task_struct_whitelist(&useroffset, &usersize);
+  task_struct_cachep = kmem_cache_create_usercopy("task_struct", ... useroffset, usersize, NULL);
+    __kmem_cache_create_args()
+
+__kmem_cache_create_args()
+  mutex_lock(&slab_mutex);
+  /* 如果 CONFIG_DEBUG_VM=y 则做一些检查，大小应在 [8B, 4MB] 范围内，不能在中断上下文 */
+  kmem_cache_sanity_check(name, object_size);
+  /* 尽可能复用现有的 kmem_cache，需要满足一些条件，比如对齐后的 objsize 相等，
+     如果找到了，就无需创建新的了，只需创建别名，在 sysfs 创建符号链接，refcount++ */
+  s = __kmem_cache_alias()
+    if (find_mergeable()) sysfs_slab_alias()
+    s->refcount++;
+  /* 创建新的 kmem_cache */
+  s = create_cache(cache_name, object_size, args, flags);
+    kmem_cache_zalloc(kmem_cache, GFP_KERNEL);
+    do_kmem_cache_create(s, name, object_size, args, flags);
+      calculate_sizes()		/* 计算各种 size，包含了 object 内存布局的全部逻辑 */
+        size = ALIGN(size, sizeof(void *)); /* word size 对齐 */
+      set_cpu_partial()		/* 设置 cpu_partial 和 cpu_partial_slabs 限制 */
+      init_kmem_cache_nodes()	/* 分配并初始化 kmem_cache_node */
+      alloc_kmem_cache_cpus()	/* 分配并初始化 kmem_cache_cpu */
+      sysfs_slab_add()		/* /sys/kernel/slab/<cache_name> */
+    s->refcount = 1;
+    list_add(&s->list, &slab_caches); /* 放进全局 slab_caches 链表 */
+  mutex_unlock(&slab_mutex);
+```
+
+- [ ] `calculate_sizes()` 是如何计算各种 size 的？`calculate_order()` 是如何计算出最佳阶数的？
+
+```bash
+lrwxrwxrwx     - root 2024-10-27 01:00 /sys/kernel/slab/io         -> :0000064
+lrwxrwxrwx     - root 2024-10-27 01:00 /sys/kernel/slab/iommu_iova -> :0000064
+```
+
 ### 分配对象
+
+```cpp
+/* 注意，很多都是 inline 的，所以可以判断是否是常量，让编译器优化 */
+kmalloc()->kmalloc_noprof()
+  /* 如果 size 是常量 */
+  if (__builtin_constant_p(size) && size)
+    /* 大于 8KB，从伙伴系统分配复合页面 */
+    if (size > KMALLOC_MAX_CACHE_SIZE) __kmalloc_large_noprof(size)
+    /* 否则从 kmem_cache 中分配 */
+    index = kmalloc_index(size);
+    __kmalloc_cache_noprof(kmalloc_caches[kmalloc_type(flags, _RET_IP_)][index], ...);
+      slab_alloc_node()
+  /* size 不是常量 */
+  __kmalloc_noprof()->__do_kmalloc_node()
+    /* 大于 8KB，从伙伴系统分配复合页面 */
+    if (unlikely(size > KMALLOC_MAX_CACHE_SIZE)) __kmalloc_large_node_noprof()
+    /* 否则选择一个 kmem_cache 从其中分配 */
+    s = kmalloc_slab(size, b, flags, caller);
+    slab_alloc_node(s, ...);
+
+kmem_cache_alloc()->kmem_cache_alloc_noprof()->slab_alloc_node()
+```
+
+可以看到 `kmalloc()` 和 `kmem_cache_alloc()` 最终都会调用 `slab_alloc_node()`
+
+```cpp
+slab_alloc_node()->__slab_alloc_node()
+  struct kmem_cache_cpu *c = raw_cpu_ptr(s->cpu_slab);
+  tid = READ_ONCE(c->tid);
+  struct slab *slab =
+```
+
+两个 freelist 指针，申请用的是 percpu 的 freelist，释放用的是 slab 的 freelist。
+对于某个 slab，可能有多个 cpu 同时在操作。一个在申请，一个在释放。因此分成两个 freelist 指针。
 
 ### 释放对象

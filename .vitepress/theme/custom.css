@@ -14,13 +14,13 @@ html {
   font-size: 1.4em;
 }
 .vp-doc h4 {
-  font-size: 1.2em;
-}
-.vp-doc h5 {
   font-size: 1.1em;
 }
+.vp-doc h5 {
+  font-size: 1em;
+}
 .vp-doc h6 {
-  font-size: 1.0em;
+  font-size: 1em;
 }
 
 .vp-doc p {
@@ -48,6 +48,9 @@ html {
   /* --vp-code-line-height: 20px; */
   /* --vp-code-font-size: 0.875em; */
   /* --vp-code-font-size: 0.825em; */
+
+  --vp-font-family-mono: "Sarasa Mono SC Nerd", "Sarasa Mono SC", ui-monospace,
+    "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace;
 }
 
 /* 宽度大于 640px 时生效 */
@@ -187,6 +190,10 @@ html {
 }
 .vp-doc .line-numbers-wrapper {
   padding-top: 8px;
+  user-select: none; /* 代码块左侧的语言，不可选中 */
+}
+.lang {
+  user-select: none; /* 代码块右上角的语言，不可选中 */
 }
 
 /* 代码 copy 按钮。防止单行代码时出现滚动条 */
