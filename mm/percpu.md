@@ -144,7 +144,7 @@ populate 的含义是填充。populated 位图记录了那些已经映射到实�
 
 `struct pcpu_chunk` 只需记录该 chunk 的 unit0 的地址范围，也就是 `chunk->base_addr`，其他的 unit 区域范围可以据此加上偏移量计算得出。**在 chunk 内分配 percpu 变量的过程，其实就是在该 chunk 的 unit0 的地址范围内寻找可用区域的过程。**
 
-##### 初始化时，创建了哪些 chunk？
+#### 初始化时，创建了哪些 chunk？
 
 根据 `pcpu_setup_first_chunk()` 里的注释，在初始化时，并不是只创建了 1 个 chunk，而是 2 个。将每个 unit_size 大小的区域都拆分成了 3 份 unit：`| static | [reserved] | dynamic |`
 
@@ -223,7 +223,7 @@ alloc_percpu()->pcpu_alloc_noprof()
 
 在完成初始化后，随着系统运行，`pcpu_first_chunk` 内空闲区域逐渐被分配，直到 `alloc_percpu()` 发现没有空闲区域时，就会创建新的 `struct pcpu_chunk` 并从其中分配。
 
-##### 说了这么多，那 `per_cpu_ptr()` 到底是怎么得到变量的地址的？
+#### 说了这么多，那 `per_cpu_ptr()` 到底是怎么得到变量的地址的？
 
 先明白这几点：
 
@@ -259,7 +259,7 @@ per_cpu_ptr(ptr, cpu)
 
 有些人在博客里提到，静态和动态 percpu 的访问效率不一样，这是错误的，都是指针+偏移量，不存在啥效率差异。
 
-##### 是如何支持 cpu hotplug 的？
+#### 是如何支持 cpu hotplug 的？
 
 使用 qemu 启动虚拟机，包含如下选项，4 个 cpu，但是支持最多热插拔到 32 个。
 内核初始化时，虽然只存在 4 个 cpu，但是实际上，为了支持 cpu hotplug，nr_units 是 32！

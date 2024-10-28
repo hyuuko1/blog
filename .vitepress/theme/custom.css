@@ -205,3 +205,8 @@ html {
   border: initial;
   border-radius: initial;
 }
+
+/* - [ ] 勾选框，垂直居中 */
+.task-list-item .task-list-item-checkbox {
+  vertical-align: middle;
+}

@@ -132,6 +132,7 @@ struct kmem_cache_cpu {
 			如果被抢占，抢占前后 cpu 变了，这个可以用来判断 */
 			unsigned long tid;
 		};
+		/* 用于在 __update_cpu_freelist_fast() 里进行 cmpxchg128 */
 		freelist_aba_t freelist_tid;
 	};
 	struct slab *slab;	/* 每次都是从这个 slab 分配 object */
@@ -277,18 +278,14 @@ SLAB_POISON，毒化 slab，在对象内存区域填充特定字节表示对象�
 
 ## 代码分析
 
-### 初始化
+### slab allocator 体系的初始化
 
-如果对象可能被拷贝到用户态，应使用 `kmem_cache_create_usercopy()` 函数，指定内核对象内存布局区域中 `useroffset` 到 `usersize` 的这段内存区域可以被复制到用户空间中，其他区域则不可以。例如，ptrace 系统调用访问当前进程的 `task_struct` 时，就会限制访问区域。
+分配内存需要用到 `struct kmem_cache`，而创建 `struct kmem_cache` 也需要分配内存。
 
-`slab_state` 全局变量，表示 slab allocator 的初始化状态。
-
-#### slab allocator 体系的初始化
-
-内核第一个 kmem_cache 是如何被创建出来的？
+那内核第一个 kmem_cache 是如何被创建出来的呢？
 
 ```cpp
-/* 初始化 struct kmem_cache * kmem_cache */
+/* 初始化 struct kmem_cache *kmem_cache */
 start_kernel()->mm_core_init()->kmem_cache_init()
   create_boot_cache("kmem_cache_node")->do_kmem_cache_create()
   slab_state = PARTIAL;
@@ -315,7 +312,13 @@ late_initcall(slab_sysfs_init);
 
 - [ ] 详细分析下 `kmem_cache_init()`
 
-#### kmem_cache 的创建
+### kmem_cache 的创建
+
+在分配某种大小的内存前，需要先创建对应的 `struct kmem_cache` 实例。
+
+如果对象可能被拷贝到用户态，应使用 `kmem_cache_create_usercopy()` 函数，指定内核对象内存布局区域中 `useroffset` 到 `usersize` 的这段内存区域可以被复制到用户空间中，其他区域则不可以。例如，ptrace 系统调用访问当前进程的 `task_struct` 时，就会限制访问区域。
+
+`slab_state` 全局变量，表示 slab allocator 的初始化状态。
 
 ```cpp
 /* 一个 kmem_cache_create_usercopy() 的例子 */
@@ -326,7 +329,7 @@ fork_init()
 
 __kmem_cache_create_args()
   mutex_lock(&slab_mutex);
-  /* 如果 CONFIG_DEBUG_VM=y 则做一些检查，大小应在 [8B, 4MB] 范围内，不能在中断上下文 */
+  /* 如果 CONFIG_DEBUG_VM=y 则做一些检查，大小应在 [8B, 4MB] 范围内，不能在 NMI,IRQ,SoftIRQ context */
   kmem_cache_sanity_check(name, object_size);
   /* 尽可能复用现有的 kmem_cache，需要满足一些条件，比如对齐后的 objsize 相等，
      如果找到了，就无需创建新的了，只需创建别名，在 sysfs 创建符号链接，refcount++ */
@@ -350,12 +353,18 @@ __kmem_cache_create_args()
 
 - [ ] `calculate_sizes()` 是如何计算各种 size 的？`calculate_order()` 是如何计算出最佳阶数的？
 
+kmem_cache 别名的例子：
+
 ```bash
 lrwxrwxrwx     - root 2024-10-27 01:00 /sys/kernel/slab/io         -> :0000064
 lrwxrwxrwx     - root 2024-10-27 01:00 /sys/kernel/slab/iommu_iova -> :0000064
 ```
 
+- [ ] `:0000064` 这个 kmem_cache 是何时创建的？
+
 ### 分配对象
+
+根据 `kmalloc_noprof()` 的注释，`GFP_NOWAIT` 或 `GFP_ATOMIC` 不会睡眠，因此可以在中断上下文使用。
 
 ```cpp
 /* 注意，很多都是 inline 的，所以可以判断是否是常量，让编译器优化 */
@@ -377,6 +386,8 @@ kmalloc()->kmalloc_noprof()
     slab_alloc_node(s, ...);
 
 kmem_cache_alloc()->kmem_cache_alloc_noprof()->slab_alloc_node()
+
+kmem_cache_alloc_bulk_noprof()
 ```
 
 可以看到 `kmalloc()` 和 `kmem_cache_alloc()` 最终都会调用 `slab_alloc_node()`
@@ -385,7 +396,40 @@ kmem_cache_alloc()->kmem_cache_alloc_noprof()->slab_alloc_node()
 slab_alloc_node()->__slab_alloc_node()
   struct kmem_cache_cpu *c = raw_cpu_ptr(s->cpu_slab);
   tid = READ_ONCE(c->tid);
-  struct slab *slab =
+  struct slab *slab = c->slab;
+  /* 如果 slab 内没有空闲对象，或者当前 slab 不在我们指定的 node 内，则走慢速路径 */
+  if (unlikely(!object || !slab || !node_match(slab, node))) __slab_alloc()
+  /* 否则，更新 freelist 让其指向下一个空闲对象，然后返回，分配成功。因为可能发生抢占，
+     导致此时在另一个 cpu 上，所以用 cmpxchg，当 freelist 和 tid 与当前 cpu 的不同时，就 redo */
+  next_object = get_freepointer_safe(s, object); /* TODO 为什么 get_freepointer_safe 这么复杂？ */
+  __update_cpu_freelist_fast()
+
+/* 慢速路径 */
+__slab_alloc()
+  /* 由于此时可能发生过抢占切换到其他 cpu 上了，因此重新获取 kmem_cache_cpu。注意这里还会禁抢占 */
+  c = slub_get_cpu_ptr(s->cpu_slab);
+  ___slab_alloc()
+reread_slab:
+    slab = READ_ONCE(c->slab);
+    if (!slab) goto new_slab;
+    /* 前面都禁抢占了，这里为什么要禁本地中断？因为在中断上下文，可能分配内存导致 c->slab 发生变化 */
+    local_lock_irqsave(&s->cpu_slab->lock, flags);
+    /* 有可能发生中断后在中断上下文分配内存，导致 c->slab 变化 */
+    if (unlikely(slab != c->slab))
+      local_unlock_irqrestore(&s->cpu_slab->lock, flags);
+      goto reread_slab;
+    /* 有可能发生中断后在中断上下文发生过内存分配/释放，使得 slab 又有空闲对象了 */
+    freelist = c->freelist;
+load_freelist:
+    /* 更新 freelist 指向下一个空闲对象后，返回 */
+    ...
+new_slab:
+    /* 遍历 c->partial 单向 slab 链表 */
+    ... 如果有，则 goto load_freelist;
+new_objects:
+    slab = get_partial(s, node, &pc); /* 从 kmem_cache_node 中获取 slab */
+
+  slub_put_cpu_ptr(s->cpu_slab); /* 打开抢占 */
 ```
 
 两个 freelist 指针，申请用的是 percpu 的 freelist，释放用的是 slab 的 freelist。
