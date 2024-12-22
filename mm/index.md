@@ -7,7 +7,10 @@
    - [x] percpu 分配器
    - [x] buddy system 物理页面分配器
    - [ ] kmalloc：SLUB
-   - [ ] CMA
+     - 还未 review kfree 的 code
+   - [x] CMA
+     - [ ] dma-mapping
+     - [ ] dma pool
 2. [ ] 内存布局
 3. 进程地址空间
    1. [ ] VMA
@@ -136,6 +139,7 @@ Linux 把物理内存划分为三个层次来管理
   内容多，而且讲的很容易懂
 - http://www.biscuitos.cn/blog/BiscuitOS_Catalogue/
 - [tolimit - 博客园](https://www.cnblogs.com/tolimit)
+- [embedded guy 专栏文章目录 - 知乎](https://zhuanlan.zhihu.com/p/407097615)
 
 ## 代码行数统计
 

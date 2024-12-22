@@ -63,7 +63,7 @@ SCRIPTS_DIR=$(dirname $0)
 
 if [ ! -f /tmp/rq.flag ]; then
     sudo chmod 777 /dev/hugepages/
-    # 为啥用 1G 大页启动虚拟机反而会变慢？
+    # 为啥用 1G 大页启动虚拟机反而会变慢？不应该更快吗？内核有bug？
     echo 8192 | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages >/dev/null
 
     sudo sh $SCRIPTS_DIR/setup-network.sh

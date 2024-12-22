@@ -148,8 +148,8 @@ vmap()
       if (!va) va = kmem_cache_alloc_node(vmap_area_cachep);
       /* 如果不是从 vmap_pool 分配的，还需要这一步分配一个虚拟地址出来  */
       __alloc_vmap_area()
-      	find_vmap_lowest_match() /* 深度遍历红黑树，得到合适的 va（并没有从红黑树中取下） */
-	va_alloc()->va_clip() /* 修改红黑树中的那个 va，剪掉我们要使用的那一段区域 */
+        find_vmap_lowest_match() /* 深度遍历红黑树，得到合适的 va（并没有从红黑树中取下） */
+        va_alloc()->va_clip() /* 修改红黑树中的那个 va，剪掉我们要使用的那一段区域 */
       /* 将 vmap_area 放进 vmap_node 的 busy 红黑树和链表 */
       struct vmap_node *vn = addr_to_node(va->va_start);
   vmap_pages_range(area->addr, .., pages)

@@ -296,10 +296,20 @@ get_page_from_freelist()
     /* 否则从 buddy system 分配 */
     else rmqueue_buddy()
       spin_lock_irqsave(&zone->lock, flags); /* 需要加锁保护 */
-      __rmqueue()->__rmqueue_smallest()
-        for (current_order = order; current_order < NR_PAGE_ORDERS; ++current_order)
-          area = &(zone->free_area[current_order]);
-          page = get_page_from_free_area(area, migratetype);
+      __rmqueue()
+        /* 如果 并且 alloc_flags & ALLOC_CMA 并且 zone 内的空闲内存有一半以上在 CMA 区域，
+           则从 CMA 区域借用页面 */
+        __rmqueue_cma_fallback()->__rmqueue_smallest(zone, order, MIGRATE_CMA);
+        /* 否则就在给定的 migratetype 分配页面 */
+        __rmqueue_smallest(zone, order, migratetype);
+          for (current_order = order; current_order < NR_PAGE_ORDERS; ++current_order)
+            area = &(zone->free_area[current_order]);
+            page = get_page_from_free_area(area, migratetype);
+        /* 如果分配失败，并且 alloc_flags & ALLOC_CMA，则从 CMA 区域借用页面 */
+        __rmqueue_cma_fallback()->__rmqueue_smallest(zone, order, MIGRATE_CMA);
+        /* 如果还是分配失败了，则 fallback 到备用的 migratetype 借用页面。
+           具体可以 fallback 到哪些 migrate，见 fallbacks 数组 */
+        __rmqueue_fallback(zone, order, migratetype, alloc_flags);
       spin_unlock_irqrestore(&zone->lock, flags);
   prep_new_page(page, order, gfp_mask, alloc_flags);
     if (order && (gfp_flags & __GFP_COMP)) prep_compound_page(page, order);

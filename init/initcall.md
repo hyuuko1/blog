@@ -11,6 +11,11 @@ static initcall_entry_t *initcall_levels[] __initdata = {
 	__initcall_end,
 };
 
-/* kernel_init 1 号内核线程 */
-do_initcall_level
+/* 1 号进程 kernel_init */
+kernel_init->kernel_init_freeable->do_basic_setup->do_initcalls
+  /* 从 level0 开始执行 initcall */
+  for (level = 0; level < ARRAY_SIZE(initcall_levels) - 1; level++)
+    do_initcall_level(level, command_line);
+      for (fn = initcall_levels[level]; fn < initcall_levels[level+1]; fn++)
+        do_one_initcall(initcall_from_entry(fn));
 ```

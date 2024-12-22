@@ -115,6 +115,11 @@ html {
   line-height: 1.5em;
 }
 
+/* 右上角的...这个按钮位于代码块上方时，背景会变成代码块的颜色，因此改成白色 */
+.VPNavBar.has-sidebar .button {
+  background-color: white;
+}
+
 /* https://sotoolbox.com/archives/11043.html
    https://developer.mozilla.org/zh-CN/docs/Web/CSS/::-webkit-scrollbar */
 /* 隐藏左侧边栏滚动条 */

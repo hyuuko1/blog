@@ -1,0 +1,1 @@
+- [linux 内核：一文读懂 wait_event_interruptible_timeout 机制 - 知乎](https://zhuanlan.zhihu.com/p/495783642)

@@ -1,0 +1,2 @@
+- [设计模式之美](https://zh.z-lib.fm/book/21511171/311ab3/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B%E7%BE%8E.html)
+- https://github.com/jianglinyang8/beauty-of-design-pattern

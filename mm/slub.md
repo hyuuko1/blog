@@ -192,6 +192,7 @@ struct slab {
 						};
 					};
 				};
+				/* 用于在 __update_freelist_fast() 里进行 cmpxchg128 */
 				freelist_aba_t freelist_counter;
 			};
 		};
@@ -293,8 +294,10 @@ start_kernel()->mm_core_init()->kmem_cache_init()
   kmem_cache = bootstrap(&boot_kmem_cache);
   kmem_cache_node = bootstrap(&boot_kmem_cache_node);
   setup_kmalloc_cache_index_table();	/* 初始化 kmalloc_size_index 数组 */
+  create_kmalloc_caches()
+    new_kmalloc_cache() /* 创建各种大小的 kmalloc-8 kmalloc-16 ... */
+    slab_state = UP;
   init_freelist_randomization();	/* 初始化 kmalloc_caches 二维数组 */
-  slab_state = UP;
 
 /* 要等 sysfs 存在之后，才能创建 /sys/kenerl/slab/，所以才 late_initcall() ? */
 late_initcall(slab_sysfs_init);
@@ -351,7 +354,8 @@ __kmem_cache_create_args()
   mutex_unlock(&slab_mutex);
 ```
 
-- [ ] `calculate_sizes()` 是如何计算各种 size 的？`calculate_order()` 是如何计算出最佳阶数的？
+- [ ] `calculate_sizes()` 是如何计算各种 size 的？换个说法，object 的布局是啥样的？
+- [ ] `calculate_order()` 是如何计算出最佳阶数的？
 
 kmem_cache 别名的例子：
 
@@ -360,7 +364,8 @@ lrwxrwxrwx     - root 2024-10-27 01:00 /sys/kernel/slab/io         -> :0000064
 lrwxrwxrwx     - root 2024-10-27 01:00 /sys/kernel/slab/iommu_iova -> :0000064
 ```
 
-- [ ] `:0000064` 这个 kmem_cache 是何时创建的？
+- [ ] `:0000064` 这个是何时创建的？用 gdb do_kmem_cache_create 并没有找到 :0000064 这个 name。
+      猜测：只有当存在 alias 时，:0000064 这个 kobj 才会被创建。
 
 ### 分配对象
 
@@ -406,7 +411,7 @@ slab_alloc_node()->__slab_alloc_node()
 
 /* 慢速路径 */
 __slab_alloc()
-  /* 由于此时可能发生过抢占切换到其他 cpu 上了，因此重新获取 kmem_cache_cpu。注意这里还会禁抢占 */
+  /* 此时可能发生过抢占，被调度到其他 cpu 上了，因此重新获取 kmem_cache_cpu。注意这里还会禁抢占 */
   c = slub_get_cpu_ptr(s->cpu_slab);
   ___slab_alloc()
 reread_slab:
@@ -420,6 +425,10 @@ reread_slab:
       goto reread_slab;
     /* 有可能发生中断后在中断上下文发生过内存分配/释放，使得 slab 又有空闲对象了 */
     freelist = c->freelist;
+    if (freelist) goto load_freelist;
+    /*  */
+    freelist = get_freelist(s, slab);
+
 load_freelist:
     /* 更新 freelist 指向下一个空闲对象后，返回 */
     ...
@@ -432,7 +441,14 @@ new_objects:
   slub_put_cpu_ptr(s->cpu_slab); /* 打开抢占 */
 ```
 
-两个 freelist 指针，申请用的是 percpu 的 freelist，释放用的是 slab 的 freelist。
-对于某个 slab，可能有多个 cpu 同时在操作。一个在申请，一个在释放。因此分成两个 freelist 指针。
+两个 freelist 指针，相当于一个 slab 上有两个链表。
+
+- `struct kmem_cache_cpu` 的 freelist，申请内存时用的是这个。
+- `struct slab` 的 freelist，释放内存时用的是这个。
+
+为什么这么设计？答：对于某个在 `struct kmem_cache_cpu` 上的 slab，可能有多个 cpu 同时在操作。一个 cpu 在申请该 slab 的 object，多个 cpu 在释放 object 到这个 slab 上。因此分成两个 freelist 指针。
+虽然，如果只用一个 freelist，也就是一个链表，用 cmpxchg 的话，能无锁，但没必要。毕竟如果用两个链表，在 `__slab_alloc` 里更新 object 时连 cmpxchg 都不需要。
 
 ### 释放对象
+
+以后有空再看
