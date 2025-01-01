@@ -1,4 +1,4 @@
-# Contiguous Memory Allocator 连续内存分配器
+# CMA (Contiguous Memory Allocator) 连续内存分配器
 
 ## 参考
 
@@ -221,16 +221,17 @@ handle_page_fault()->do_user_addr_fault()->...->do_anonymous_page()
             page = get_page_from_free_area(area, migratetype);
 ```
 
+`migratetype` 是同一个 pageblock 内的页面的属性。
+
+- [ ] 没太搞懂，空闲页面被放到 buddy system 时，是怎么决定放到哪个 migratetype 的 freelist 上的？
+      我只理解 `MIGRATE_CMA` 需要放到单独的链表上，当为什么其他类型的不能放在同一个链表上？
+
 注意，`MIGRATE_CMA` 和 `MIGRATE_MOVABLE` 是有区别的，
-前者只能用于分配可以移动的页面；后者实际上可以被窃取被用于分配不可被移动的页面？
+前者只能分配的页面必须可以被移动；后者实际上可以被窃取被用于分配不可被移动的页面？
 
 ## 设备驱动从 CMA 区域分配内存
 
 当设备驱动程序需要使用 CMA 区域的时候，如果 CMA 区域中的物理页已经被页分配器分配出去，需要把物理页迁移到其他地方。
-
-```cpp
-
-```
 
 或者是初始化 dma pool 时，
 
@@ -246,10 +247,45 @@ dma_heap_buffer_alloc()
   ops->allocate:cma_heap_allocate()->cma_alloc()
 ```
 
+讲述下流程：
+
+1. 在 cma.c 这一层，通过在位图中查找，来找到一块连续的未被分配的区域
+2. 调用 `alloc_contig_range_noprof()` 函数，从 buddy system 中分配指定的这块区域。
+   1. 参数约束：指定的范围内的 pageblock，必须是相同类型，并且要么是 MIGRATE_MOVABLE 要么是 MIGRATE_CMA
+
+```cpp
+__cma_alloc()
+  /* 通过在位图中查找空闲区域，确认要分配的连续物理页面范围 */
+  /* 从 buddy system 中拿出这部分连续物理页面。 */
+  alloc_contig_range_noprof(pfn, pfn + count, MIGRATE_CMA, gfp)
+    /* 该范围内的物理页面，可能不在 MIGRATE_CMA 已经被借用走了，比如被用于作为用户进程的私有匿名页，
+    因此需要进行迁移 */
+    /* 把物理页的迁移类型设置为隔离类型 MIGRATE_ISOLATE 隔离物理页，防止页分配器把空闲页分配出去 */
+    start_isolate_page_range()
+    /* 将所在 zone 内的 pcp list 里的页面都还回到 buddy system */
+    drain_all_pages()
+    /* 处理已经被 buddy system 分配出去的物理页 */
+    __alloc_contig_migrate_range()
+      /* 回收干净的页，文件页不可移动，只可回收//XXX 这是为什么 */
+      reclaim_clean_pages_from_list()
+      /* 将可移动的页迁移到其他地方 */
+      migrate_pages()
+    /* 处理空闲页，把空闲页从 buddy system 中删除 */
+    isolate_freepages_range()
+    /* 撤销 MIGRATE_ISOLATE 改为 MIGRATE_CMA */
+    undo_isolate_page_range()
+```
+
 ## 设备驱动释放 CMA 区域的内存
 
 ```cpp
 cma_release()
+  /* 检查页面是否属于 CMA 区域 */
+  if (!cma_pages_valid()) return false;
+  /* 将页面释放给 buddy system */
+  free_contig_range()
+  /* 在 CMA 区域的位图中，把页的分配状态设置为空闲 */
+  cma_clear_bitmap()
 ```
 
 ## /sys/kernel/mm/cma/

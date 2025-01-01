@@ -61,17 +61,6 @@ QEMU_SRC_DIR=/data/os-code/qemu
 # 当前所执行脚本所在目录
 SCRIPTS_DIR=$(dirname $0)
 
-if [ ! -f /tmp/rq.flag ]; then
-    sudo chmod 777 /dev/hugepages/
-    # 为啥用 1G 大页启动虚拟机反而会变慢？不应该更快吗？内核有bug？
-    echo 8192 | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages >/dev/null
-
-    sudo sh $SCRIPTS_DIR/setup-network.sh
-
-    touch /tmp/rq.flag
-    echo "init done"
-fi
-
 ID=0
 QMP=1
 VERBOSE=1
@@ -85,6 +74,37 @@ ALL_DEVICE=1
 USE_INITRD=0
 
 VIRTIO_MODERN_OPTS="disable-legacy=on,disable-modern=off"
+
+# HUGETLBFS=/dev/shm
+HUGETLBFS=/dev/hugepages
+# HUGETLBFS=/dev/hugepages-1GB
+NR_2MB_PAGES=8192
+NR_1GB_PAGES=0
+function prepare_hugepages() {
+    nr_pages=$(</sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages)
+    if [ $nr_pages -eq 0 ]; then
+        sudo chmod 777 /dev/hugepages/
+        echo $NR_2MB_PAGES | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages >/dev/null
+    fi
+
+    # 为什么用 1GB 大页会比用 2MB 大页时，要慢 0.3s 左右？
+    if [ ! -d /dev/hugepages-1GB/. ]; then
+        sudo mkdir /dev/hugepages-1GB
+        sudo mount -t hugetlbfs hugetlbfs /dev/hugepages-1GB -o rw,nosuid,nodev,relatime,pagesize=1024M
+        sudo chmod 777 /dev/hugepages-1GB
+    fi
+
+    nr_pages=$(</sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages)
+    if [ $nr_pages -eq 0 ]; then
+        echo $NR_1GB_PAGES | sudo tee /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages
+    fi
+}
+
+function prepare_network() {
+    if [ ! -d /sys/class/net/br0/bridge/. ]; then
+        sudo sh $SCRIPTS_DIR/setup-network.sh
+    fi
+}
 
 ###
 ###
@@ -225,8 +245,8 @@ CPU_ARGS="
 # prealloc=on 会导致 qemu 启动慢几秒
 MEM_ARGS="
 -m $MEM_SIZE
--object memory-backend-file,id=ram-node0,size=4G,mem-path=/dev/hugepages,share=on,prealloc=off
--object memory-backend-file,id=ram-node1,size=4G,mem-path=/dev/hugepages,share=on,prealloc=off
+-object memory-backend-file,id=ram-node0,size=4G,mem-path=$HUGETLBFS,share=on,prealloc=off
+-object memory-backend-file,id=ram-node1,size=4G,mem-path=$HUGETLBFS,share=on,prealloc=off
 -numa node,nodeid=0,cpus=0-1,cpus=4-9,memdev=ram-node0
 -numa node,nodeid=1,cpus=2-3,cpus=10-15,memdev=ram-node1
 "
@@ -308,6 +328,9 @@ if [ $ALL_DEVICE -eq 1 ]; then
 fi
 
 export LD_LIBRARY_PATH="/data/os-code/rdma-core/build/lib"
+
+prepare_hugepages
+prepare_network
 
 if [ $GDB_QEMU -eq 1 ]; then
     eval gdbserver localhost:1234 $QEMU_CMD
