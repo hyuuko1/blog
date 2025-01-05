@@ -41,6 +41,9 @@ features:
   - title: 设备与中断
     link: /
     details: device/driver/bus, hardirq, softirq, tasklet, workqueue, MSI-X, APIC, GICv4
+  - title: 体系结构
+    link: /arch
+    details: 一些ISA相关的内容
   - title: Booting
     link: /
     details: SeaBIOS, edk2, Linux Boot Process

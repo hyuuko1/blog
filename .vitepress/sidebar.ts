@@ -16,6 +16,11 @@ export function nav(): DefaultTheme.NavItem[] {
       activeMatch: "/irq/",
     },
     {
+      text: "体系结构",
+      link: "/arch/index",
+      activeMatch: "/arch/",
+    },
+    {
       text: "调试",
       link: "/debug/index",
       activeMatch: "/debug/",
@@ -43,6 +48,10 @@ export function sidebar(): DefaultTheme.Sidebar {
     "/irq/": {
       base: "/irq/",
       items: sidebarIRQ(),
+    },
+    "/arch/": {
+      base: "/arch/",
+      items: sidebarArch(),
     },
     "/debug/": {
       base: "/debug/",
@@ -88,7 +97,7 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
         { text: "rmap 反向映射", link: "rmap" },
         { text: "vma", link: "vma" },
         { text: "mmap", link: "mmap" },
-        { text: "🚧 page fault", link: "pagefault" },
+        { text: "page fault", link: "pagefault" },
         { text: "🚧 page table", link: "page_table" },
         { text: "🚧 ioremap", link: "ioremap" },
         { text: "🚧 fixmap", link: "fixmap" },
@@ -114,8 +123,8 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
         { text: "SLUB 内存分配器", link: "slub" },
         { text: "CMA 连续内存分配器", link: "cma" },
         { text: "🚧 早期内存分配器 memblock", link: "memblock" },
+        { text: "HugeTLB 大页内存", link: "hugetlb" },
         { text: "🚧 THP (Transparent Huge Page) 透明大页", link: "thp" },
-        { text: "🚧 HugeTLB 大页内存", link: "hugetlb" },
         { text: "🚧 页面回收和交换", link: "swap" },
         { text: "🚧 内存压缩", link: "compaction" },
         { text: "🚧 页面迁移", link: "migration" },
@@ -212,6 +221,22 @@ function sidebarIRQ(): DefaultTheme.SidebarItem[] {
         { text: "Linux IRQ", link: "irq" },
         { text: "MSI-X", link: "msix" },
       ],
+    },
+  ];
+}
+
+function sidebarArch(): DefaultTheme.SidebarItem[] {
+  return [
+    {
+      text: "x86",
+      collapsed: false,
+      base: "/arch/x86/",
+    },
+    {
+      text: "ARM",
+      collapsed: false,
+      base: "/arch/arm/",
+      items: [{ text: "AArch64虚拟内存系统架构", link: "virtual_memory" }],
     },
   ];
 }
