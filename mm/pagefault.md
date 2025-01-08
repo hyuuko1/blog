@@ -95,10 +95,11 @@ handle_mm_fault()
         /* 如果没有写权限，则进行 CoW */
         if (!pte_write(entry)) return do_wp_page(vmf);
         /* 对于 ARM 架构，如果未启用硬件管理 dirty state，那么 writable-clean 的描述符会造成
-	   Permission fault，由 Linux 管理 dirty state */
+           Permission fault，由 Linux 管理 dirty state */
         else if (likely(vmf->flags & FAULT_FLAG_WRITE)) entry = pte_mkdirty(entry);
       /* 置上 Access flag */
       entry = pte_mkyoung(entry);
+      /* 如果 pte 和之前的相比有变化，则更新页表里的页表项，并进行 TLB invalid */
       if (ptep_set_access_flags(vmf->vma, vmf->address, vmf->pte, entry, vmf->flags & FAULT_FLAG_WRITE))
         update_mmu_cache_range(vmf, vmf->vma, vmf->address, vmf->pte, 1);
 ```
@@ -111,18 +112,170 @@ handle_mm_fault()
 - [ ] `FAULT_FLAG_UNSHARE` 是啥作用？
       [\[PATCH v4 15/17\] mm: support GUP-triggered unsharing of anonymous pages - David Hildenbrand](https://lore.kernel.org/all/20220428083441.37290-16-david@redhat.com/)
 
-### do_anonymous_page 匿名页的缺页异常
+### do_anonymous_page (私有)匿名页的缺页异常
+
+`vma_is_anonymous()` 函数认为 `vma->vm_ops` 为 NULL 的是匿名页。
+
+共享匿名映射的页面，其 vm_ops 不是 NULL，是 `shmem_anon_vm_ops`，因此不被视作匿名页，而是文件页。详见 [mmap](./mmap.md)
+TODO 为啥这么设计？我的理解：linux 把这一块共享的资源抽象为一个文件？多个进程共享这个内存，就相当于是共享这个文件？
+
+```cpp
+do_anonymous_page()
+  /* 如果是 vm_ops 为 NULL 的共享映射，说明有问题 */
+  if (vma->vm_flags & VM_SHARED) return VM_FAULT_SIGBUS;
+  /* 如果页表不存在，则 alloc */
+  pte_alloc(vma->vm_mm, vmf->pmd);
+  /* 如果不是写操作导致的 fault，则使用 zero page */
+  if (!(vmf->flags & FAULT_FLAG_WRITE))
+    /* 映射到专用的零页，并置上软件定义的 PTE_SPECIAL flag */
+    entry = pte_mkspecial(pfn_pte(my_zero_pfn(vmf->address)));
+    /* TODO 没太看懂这个函数。在直接页表中查找虚拟地址对应的表项，并且锁住页表 */
+    vmf->pte = pte_offset_map_lock();
+    /* TODO 没看懂为啥这里直接 goto unlock 了 */
+    if (!vmf->pte) goto unlock;
+    /* TODO 也没看懂 */
+    if (vmf_pte_changed(vmf)) update_mmu_tlb(); goto unlock;
+    /* 去更新页表 */
+    goto setpte;
+  /* TODO rmap 啥的 */
+  vmf_anon_prepare(vmf);
+  /* 分配我们自己的私有页，会优先从 highmem 分配，并初始化为 0 */
+  alloc_anon_folio(vmf);
+    /* TODO 涉及一堆 thp 相关的 */
+    ...
+    folio_prealloc()
+  /* 给 struct page 的 ->flags 置上 PG_uptodate，表示物理页包含有效的数据 */
+  __folio_mark_uptodate(folio);
+  /* 生成页表项，并 */
+  entry = mk_pte(&folio->page, vma->vm_page_prot);
+  /* 除了不支持硬件设置 Access bit 的 MIPS 架构以外，其他架构的这个啥也没做。
+     详见 https://lore.kernel.org/all/1590546320-21814-4-git-send-email-maobibo@loongson.cn/
+     如果有些不支持硬件设置 Access bit 的 ARM 机器，这里是不是 pte_mkyoung 更好些？*/
+  entry = pte_sw_mkyoung(entry);
+  /* 对于某些不支持硬件设置 dirty bit 的 ARM 机器，这里 pte_mkdirty 可以防止回到用户态后，
+     继续 write 时再次发生 Permission fault 产生不必要的开销 */
+  if (vma->vm_flags & VM_WRITE)
+    entry = pte_mkwrite(pte_mkdirty(entry), vma);
+  /* TODO 没太看懂这个函数。在直接页表中查找虚拟地址对应的表项，并且锁住页表 */
+  vmf->pte = pte_offset_map_lock();
+  if (!vmf->pte) goto release;
+  /* 建立起匿名页的反向映射 */
+  folio_add_new_anon_rmap(folio, vma, addr, RMAP_EXCLUSIVE);
+  /* 放到 LRU 链表中 */
+  folio_add_lru_vma(folio, vma);
+setpte:
+  /* 设置页表项 */
+  set_ptes(vma->vm_mm, addr, vmf->pte, entry, nr_pages);
+  /* 更新 TLB */
+  update_mmu_cache_range(vmf, vma, addr, vmf->pte, nr_pages);
+```
 
 ### do_fault 文件页的缺页异常
 
+什么情况会触发文件页的缺页异常呢？
+
+1. 启动程序的时候，内核为程序的代码段和数据段创建私有的文件映射，映射到进程的虚拟地址空间，第一次访问的时候触发文件页的缺页异常。
+2. 进程使用 mmap 创建文件映射，把文件的一个区间映射到进程的虚拟地址空间，第一次访问的时候触发文件页的缺页异常。
+
+函数 `do_fault()` 处理文件页和共享匿名页的缺页异常
+
+```cpp
+do_fault()
+  if (!vma->vm_ops->fault)
+  else if (!(vmf->flags & FAULT_FLAG_WRITE))
+    do_read_fault(vmf);
+  else if (!(vma->vm_flags & VM_SHARED))
+    do_cow_fault(vmf);
+  else
+    do_shared_fault(vmf);
+```
+
 #### do_read_fault 处理读文件页错误
+
+```cpp
+
+```
 
 #### do_cow_fault 处理写私有文件页错误
 
+```cpp
+
+```
+
 #### do_shared_fault 处理写共享文件页错误
+
+```cpp
+
+```
 
 ### do_swap_page 页面换入
 
+```cpp
+
+```
+
 ### do_wp_page 处理写时复制
 
+```cpp
+
+```
+
 ## 内核模式页错误异常
+
+```bash
+@[
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+12846
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+12846
+    bpf_trampoline_6442466157+67
+    __do_fault+5
+    do_fault+279
+    __handle_mm_fault+1986
+    handle_mm_fault+226
+    do_user_addr_fault+349
+    exc_page_fault+129
+    asm_exc_page_fault+38
+    _copy_to_iter+199
+    copy_page_to_iter+140
+    filemap_read+478
+    vfs_read+665
+    __x64_sys_pread64+152
+    do_syscall_64+130
+    entry_SYSCALL_64_after_hwframe+118
+]: 1065
+@[
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+12846
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+12846
+    bpf_trampoline_6442466157+67
+    __do_fault+5
+    do_fault+279
+    __handle_mm_fault+1986
+    handle_mm_fault+226
+    do_user_addr_fault+349
+    exc_page_fault+129
+    asm_exc_page_fault+38
+    _copy_to_iter+199
+    copy_page_to_iter+140
+    shmem_file_read_iter+264
+    vfs_read+665
+    __x64_sys_pread64+152
+    do_syscall_64+130
+    entry_SYSCALL_64_after_hwframe+118
+]: 1362
+@[
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+12846
+    bpf_prog_6deef7357e7b4530_sd_fw_ingress+12846
+    bpf_trampoline_6442466157+67
+    __do_fault+5
+    do_fault+279
+    __handle_mm_fault+1986
+    handle_mm_fault+226
+    do_user_addr_fault+535
+    exc_page_fault+129
+    asm_exc_page_fault+38
+]: 18173
+```
+
+[详解 Linux 内核之脏页跟踪-良许 Linux 教程网](https://www.lxlinux.net/8943.html)
+[linux 那些事之 zero page【转】 - Sky&amp;Zhang - 博客园](https://www.cnblogs.com/sky-heaven/p/16621085.html)
+[RISC-V 缺页异常处理程序分析（2）：handle_pte_fault() 和 do_anonymous_page() - 泰晓科技](https://tinylab.org/riscv-page-fault-part2/)
+[ARM Linux 如何模拟 X86 PTE 中的 Present Young 和 Dirty 标志位\_arm 怎么模拟 dirty-CSDN 博客](https://blog.csdn.net/zf1575192187/article/details/105207086)

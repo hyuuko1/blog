@@ -30,6 +30,11 @@ export function nav(): DefaultTheme.NavItem[] {
       link: "/virtualization/index",
       activeMatch: "/virtualization/",
     },
+    {
+      text: "其他",
+      link: "/other/index",
+      activeMatch: "/other/",
+    },
   ];
 }
 
@@ -60,6 +65,10 @@ export function sidebar(): DefaultTheme.Sidebar {
     "/virtualization/": {
       base: "/virtualization/",
       items: sidebarVirtualization(),
+    },
+    "/other/": {
+      base: "/other/",
+      items: sidebarOther(),
     },
   };
 }
@@ -256,6 +265,19 @@ function sidebarDebug(): DefaultTheme.SidebarItem[] {
       text: "Tracing",
       collapsed: false,
       items: [{ text: "bpftrace 用法", link: "bpf/bpftrace" }],
+    },
+  ];
+}
+
+function sidebarOther(): DefaultTheme.SidebarItem[] {
+  return [
+    {
+      text: "电源管理",
+      collapsed: false,
+      items: [
+        { text: "ACPI", link: "acpi" },
+        { text: "CPU 热插拔", link: "cpu_hotplug" },
+      ],
     },
   ];
 }

@@ -105,7 +105,7 @@ XXX 难道：如果用 Direct permission，因为只允许硬件管理不允许�
 对于一个可写的页面，Linux 会将描述符的 DBM field 置 1，将 RDONLY field 也置 1，表示该描述符是 writable-clean 的。
 
 - 当启用硬件管理 Access flag 和 dirty state 时。发生 write access，硬件会将 Access flag 置 1（如果是第一次访问），并且将 RDONLY field 置清 0，使得描述符从 writable-clean 变为 writable-dirty。
-- 当禁用硬件管理 Access flag 和 dirty state 时。发生 write access，由于是 writable-clean 的（DBM 是 1，RDONLY 是 1），因此会发生 Permission fault，Linux 会在 `handle_pte_fault()` 函数中，先 `pte_mkdirty()` 将软件定义的 DIRTY field 置 1，并将 RDONLY field 清 0，然后 `pte_mkyoung()` 将 Access flag 置 1（如果是第一次访问）。
+- 当禁用硬件管理 Access flag 和 dirty state 时。发生 write access，由于是 writable-clean 的（DBM 是 1，RDONLY 是 1），因此会发生 Permission fault，Linux 会在 `handle_pte_fault()` 函数中，先 `pte_mkdirty()` 将软件定义的 DIRTY field 置 1，并将 RDONLY field 清 0，使得描述符从 writable-clean 变为 writable-dirty。然后 `pte_mkyoung()` 将 Access flag 置 1（如果是第一次访问）。
 
 `handle_pte_fault()` 函数详见 [pagefault](../../mm/pagefault.md)。
 
