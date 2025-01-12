@@ -31,9 +31,24 @@ export function nav(): DefaultTheme.NavItem[] {
       activeMatch: "/virtualization/",
     },
     {
-      text: "其他",
-      link: "/other/index",
-      activeMatch: "/other/",
+      text: "杂项",
+      items: [
+        {
+          text: "其他",
+          link: "/other/index",
+          activeMatch: "/other/",
+        },
+        {
+          text: "初始化",
+          link: "/init/index",
+          activeMatch: "/init/",
+        },
+        {
+          text: "电源管理",
+          link: "/pm/index",
+          activeMatch: "/pm/",
+        },
+      ],
     },
   ];
 }
@@ -69,6 +84,14 @@ export function sidebar(): DefaultTheme.Sidebar {
     "/other/": {
       base: "/other/",
       items: sidebarOther(),
+    },
+    "/init/": {
+      base: "/init/",
+      items: sidebarInit(),
+    },
+    "/pm/": {
+      base: "/pm/",
+      items: sidebarPM(),
     },
   };
 }
@@ -272,10 +295,34 @@ function sidebarDebug(): DefaultTheme.SidebarItem[] {
 function sidebarOther(): DefaultTheme.SidebarItem[] {
   return [
     {
-      text: "电源管理",
+      text: "其他",
+      collapsed: false,
+      items: [
+        { text: "Linux 设备模型", link: "device_model" },
+        { text: "内核模块", link: "module" },
+      ],
+    },
+  ];
+}
+
+function sidebarInit(): DefaultTheme.SidebarItem[] {
+  return [
+    {
+      text: "Linux 内核初始化",
+      collapsed: false,
+      items: [{ text: "initcall", link: "initcall" }],
+    },
+  ];
+}
+
+function sidebarPM(): DefaultTheme.SidebarItem[] {
+  return [
+    {
+      text: "Linux 电源管理",
       collapsed: false,
       items: [
         { text: "ACPI", link: "acpi" },
+        { text: "CPU 管理", link: "cpu" },
         { text: "CPU 热插拔", link: "cpu_hotplug" },
       ],
     },

@@ -143,7 +143,7 @@ do_mmap()
     vma->vm_file = get_file(file);
     mmap_file(file, vma);
     /* 对于共享的匿名映射，在内存文件系统 tmpfs 中创建名为 /dev/zero 的文件，并创建 file。
-       vma 的 vm_file 会指向这个 file（明明不是文件页！），vm_ops 为 shmem_vm_ops */
+       vma 的 vm_file 会指向这个 file（明明不是文件页！），vm_ops 为 shmem_anon_vm_ops */
     shmem_zero_setup(vma);
     /* 对于私有的匿名映射，将 vma->vm_ops 设置为 NULL */
     vma_set_anonymous(vma);

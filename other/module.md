@@ -16,7 +16,7 @@ load_module()
 没改动一些结构体的定义，就不会对已经编译的模块造成影响，
 即使内核重新编译后会导致一些符号的地址变化，但之前编译的模块仍然可以继续使用的！
 
-##
+## 符号 CRC 校验
 
 - [Linux 内核模块校验机制 | 夜云泊](https://lifeislife.cn/posts/linux%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E6%A0%A1%E9%AA%8C%E6%9C%BA%E5%88%B6/)
 - [Linux 内核模块符号 CRC 检查机制-CSDN 博客](https://blog.csdn.net/linyt/article/details/42559639)
@@ -32,6 +32,8 @@ load_module()
 并且在编译出的 Module.symvers 有以下内容，第一列是符号的 CRC 值
 
 ```c
+0x638fa329	module_layout vmlinux EXPORT_SYMBOL
+
 0xf7370f56	system_state	vmlinux	EXPORT_SYMBOL
 0xbea5ff1e	static_key_initialized	vmlinux	EXPORT_SYMBOL_GPL
 0xc2e587d1	reset_devices	vmlinux	EXPORT_SYMBOL
@@ -71,25 +73,7 @@ load_module()
 3. 编译模块时，用对应内核的 Module.symvers，就不会校验失败了
 4. [Linux 内核模块校验机制 | 夜云泊](https://lifeislife.cn/posts/linux%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E6%A0%A1%E9%AA%8C%E6%9C%BA%E5%88%B6/)
 
-## 模块签名
-
-如何绕过？
-
-直接改代码，
-
-```cpp
-int module_sig_check(struct load_info *info, int flags)
-{
-	...
-	err = mod_verify_sig(mod, info);
-	err = 0; /* 新增这一样 */
-	...
-}
-```
-
-0x638fa329 module_layout vmlinux EXPORT_SYMBOL
-
-如果在 zone_type 里新增，会影响到 MAX_NR_ZONES 的值，进而影响到一堆结构体。
+一个很小的改动，可能会影响到很多符号的 CRC 值，例如，如果在 `zone_type` 里新增一项，会影响到 `MAX_NR_ZONES` 的值，进而影响到一堆结构体。
 
 ```cpp
 struct mm_struct {
@@ -99,5 +83,19 @@ struct mm_struct {
 			unsigned long		lru_zone_size[MAX_NR_ZONES][NR_LRU_LISTS];
 		}
 	}
+}
+```
+
+## 模块签名校验
+
+如何绕过？直接改代码，
+
+```cpp
+int module_sig_check(struct load_info *info, int flags)
+{
+	...
+	err = mod_verify_sig(mod, info);
+	err = 0; /* 新增这一行 */
+	...
 }
 ```
