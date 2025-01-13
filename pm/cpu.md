@@ -50,10 +50,10 @@ kernel/cpu.c
 
 这里一共有 4 种状态需要表示：
 
-- `cpu_possible_bits`，系统中包含的所有的可能的 CPU core，在系统初始化的时候就已经确定。对于 ARM64 来说，DTS 中所有格式正确的 CPU core，都属于 possible 的 core；
-- `cpu_present_bits`，系统中所有可用的 CPU core（具备 online 的条件，具体由底层代码决定），并不是所有 possible 的 core 都是 present 的。对于支持 CPU hotplug 的形态，present core 可以动态改变；
-- `cpu_online_bits`，系统中所有运行状态的 CPU core（后面会详细说明这个状态的意义）；
-- `cpu_active_bits`，有 active 的进程正在运行的 CPU core。
+- `cpu_possible_mask`，系统中包含的所有的可能的 CPU core，在系统初始化的时候就已经确定。对于 ARM64 来说，DTS 中所有格式正确的 CPU core，都属于 possible 的 core；
+- `cpu_present_mask`，系统中所有可用的 CPU core（具备 online 的条件，具体由底层代码决定），并不是所有 possible 的 core 都是 present 的。对于支持 CPU hotplug 的形态，present core 可以动态改变；
+- `cpu_online_mask`，系统中所有运行状态的 CPU core（后面会详细说明这个状态的意义）；
+- `cpu_active_mask`，有 active 的进程正在运行的 CPU core。
 
 - possible 状态的 CPU 意味着是“populatable（觉得这个单词还没有 possible 易懂）”的，可理解为存在这个 CPU 资源，但还没有纳入 Kernel 的管理范围；
 - present 状态的 CPU，是已经“populated”的 CPU，可理解为已经被 kernel 接管；
@@ -103,6 +103,15 @@ static __always_inline bool cpu_possible(unsigned int cpu) {}
 static __always_inline bool cpu_present(unsigned int cpu) {}
 static __always_inline bool cpu_active(unsigned int cpu) {}
 static __always_inline bool cpu_dying(unsigned int cpu) {}
+```
+
+```cpp
+topology_init_possible_cpus()
+  init_cpu_present(cpumask_of(0));
+  init_cpu_possible(cpumask_of(0));
+  for (cpu = 0; cpu < allowed; cpu++)
+    set_cpu_possible(cpu, true);
+    set_cpu_present(cpu, test_bit(apicid, phys_cpu_present_map));
 ```
 
 ### up/down
@@ -171,12 +180,74 @@ register_cpu()
 
 ## smp
 
-平台相关
-
 arch/x86/kernel/smp.c
 
-## cpu ops
+平台相关，承担承上启下的角色，主要提供两类功能：
+
+1. arch-dependent 的 SMP 初始化、CPU core 控制等操作
+2. IPI（Inter-Processor Interrupts）相关的支持
+
+```cpp
+/*  */
+struct smp_ops smp_ops = {
+	.smp_prepare_boot_cpu	= native_smp_prepare_boot_cpu,
+	.smp_prepare_cpus	= native_smp_prepare_cpus,
+	.smp_cpus_done		= native_smp_cpus_done,
+	.stop_other_cpus	= native_stop_other_cpus,
+	.crash_stop_other_cpus	= kdump_nmi_shootdown_cpus,
+	.smp_send_reschedule	= native_smp_send_reschedule,
+	.kick_ap_alive		= native_kick_ap,		/*  */
+	.cpu_disable		= native_cpu_disable,		/*  */
+	.play_dead		= native_play_dead,
+	.send_call_func_ipi	= native_send_call_func_ipi,
+	.send_call_func_single_ipi = native_send_call_func_single_ipi,
+};
+EXPORT_SYMBOL_GPL(smp_ops);
+/* 如果有 MADT，还会设置一些 ops */
+start_kernel()->acpi_boot_init()->acpi_table_parse_madt()->acpi_parse_mp_wake()->acpi_mp_setup_reset()
+  smp_ops.play_dead = acpi_mp_play_dead;
+  smp_ops.stop_this_cpu = acpi_mp_stop_this_cpu;
+  smp_ops.cpu_die = acpi_mp_cpu_die;
+
+
+
+/* 1 号进程 kernel_init 运行在 boot cpu 上 */
+kernel_init()->kernel_init_freeable()
+  /* kernel/smp.c */
+  smp_init()->bringup_nonboot_cpus()->cpuhp_bringup_cpus_parallel()->cpuhp_bringup_mask()
+    cpu_up()->_cpu_up()->cpuhp_up_callbacks()->cpuhp_invoke_callback_range()->__cpuhp_invoke_callback_range()->cpuhp_invoke_callback()
+      native_kick_ap()->do_boot_cpu()
+        initial_code = (unsigned long)start_secondary;
+
+/* cpu1 */
+secondary_startup_64 /* arch/x86/kernel/head_64.S */
+  callq	*initial_code(%rip) /* 也就是 start_secondary */
+```
+
+在 ARM 和 RISC-V 里没有 `struct smp_ops`，而是 `struct cpu_operations`
 
 ## cpu topology
 
+drivers/base/arch_topology.c
+
+ARM 和 RISC-V 会用到，从 Device Tree 里读取 cpu 信息。x86 默认不启用这个 `GENERIC_ARCH_TOPOLOGY`。
+
+```cpp
+/* include/linux/arch_topology.h */
+struct cpu_topology {
+	int thread_id;
+	int core_id;
+	int cluster_id;
+	int package_id;
+	cpumask_t thread_sibling;
+	cpumask_t core_sibling;
+	cpumask_t cluster_sibling;
+	cpumask_t llc_sibling;
+};
+```
+
 ## cpu info 及其它
+
+arch/arm64/kernel/cpuinfo.c
+
+x86 用的是 cpuid？
