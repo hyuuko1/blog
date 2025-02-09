@@ -58,6 +58,28 @@ struct cpuhp_step：Hotplug state machine step，主要定义了函数指针，�
 ### 代码分析
 
 ```cpp
+enum cpuhp_state {
+	CPUHP_OFFLINE = 0,
+	...
+	CPUHP_BRINGUP_CPU,
+	...
+	CPUHP_ONLINE,
+}
+```
+
+#### cpu online
+
+在系统 boot 阶段，non-boot cpu 的启动，和 cpu hotplug online 是一样的流程，最后都是调用 `cpu_up()`
+
+```cpp
+/* 1 号进程的入口函数 kernel_init */
+kernel_init()->kernel_init_freeable()->smp_init()->bringup_nonboot_cpus()
+  /* TODO cpuhp_bringup_cpus_parallel() */
+  cpuhp_bringup_mask(cpu_present_mask)
+    for_each_cpu(cpu, mask) cpu_up(cpu, CPUHP_ONLINE)
+```
+
+```cpp
 /* echo 1 > /sys/devices/system/cpu/cpu1/online
    cpu 被抽象为一个设备，挂在 cpu bus 上，
    这里会调用总线上的 online 钩子 */
@@ -65,22 +87,111 @@ online_store()->device_online()->cpu_subsys_online()
   from_nid = cpu_to_node(cpuid);
   /* 如果失败会多次 retry */
   cpu_device_up(dev)->cpu_up(dev->id, CPUHP_ONLINE)
-    _cpu_up()
-      /* 传入的 target 是 CPUHP_BRINGUP_CPU */
-      cpuhp_up_callbacks()->cpuhp_invoke_callback_range()->__cpuhp_invoke_callback_range()
-        /* 从当前的 st->state 到 CPUHP_BRINGUP_CPU 的回调全部调用一遍 */
-        while (cpuhp_next_state()) cpuhp_invoke_callback()
-          /* cpuhp_kick_ap_alive */
-          step->startup.single()
   /* 当将内存热插拔到内存很少的 node 上然后启用 node 上的 cpu 时，
      cpu 的 node 号可能会变化 */
   to_nid = cpu_to_node(cpuid);
   if (from_nid != to_nid) change_cpu_under_node(cpu, from_nid, to_nid);
+```
 
+`cpu_up` 流程简述
 
+1. BP 执行完 CPUHP_OFFLINE 到 CPUHP_BRINGUP_CPU 的 startup 钩子
+   1. CPUHP_BP_KICK_AP 钩子，会启动目标 CPU
+   2. CPUHP_BRINGUP_CPU 钩子，会
+2. AP 被唤醒，
+3. AP 执行 cpu hotplug 线程。
+
+```cpp
+cpu_up(dev->id, CPUHP_ONLINE)
+  /* 先 online cpu 所属的 node，主要是内存管理子系统相关的 */
+  try_online_node()
+  _cpu_up()
+    cpuhp_set_state(cpu, st, target=CPUHP_ONLINE);
+      st->rollback = false;
+      st->target = target;
+      st->single = false;
+    /* 从当前的 st->state 到 CPUHP_BRINGUP_CPU 的 startup 回调全部调用一遍 */
+    cpuhp_up_callbacks(target=CPUHP_BRINGUP_CPU)->cpuhp_invoke_callback_range()->__cpuhp_invoke_callback_range()
+      while (cpuhp_next_state()) cpuhp_invoke_callback()
+        step->startup.single()
+```
+
+接下来介绍几个 startup 回调
+
+在系统启动阶段，某些子系统会 `smpboot_register_percpu_thread()` 注册与 hotplug 相关的线程，并为 **已经 online 的 cpu** 创建这些 per-cpu 线程。
+
+1. `cpuhp_state.thread` 也就是 hotplug 线程
+2. `cpu_stopper.thread`
+3. `irq_workd`
+4. `backlog_napi`
+5. `rcu_data.rcu_cpu_kthread_task`
+6. `ksoftirqd`
+7. `ktimerd`（如果启用了 `CONFIG_IRQ_FORCED_THREADING` 强制中断线程化）
+
+```cpp
+/* CPUHP_CREATE_THREADS startup 回调，为 AP 创建以上 per-cpu 线程 */
+smpboot_create_threads()
+
+/* CPUHP_PERF_PREPARE startup 回调 */
+
+/* CPUHP_RANDOM_PREPARE startup 回调 */
+
+/* CPUHP_WORKQUEUE_PREP startup 回调 */
+
+/* CPUHP_HRTIMERS_PREPARE startup 回调 */
+
+/* CPUHP_SMPCFD_PREPARE startup 回调 */
+
+/* CPUHP_RELAY_PREPARE startup 回调 */
+
+/* CPUHP_RCUTREE_PREP startup 回调 */
+
+/* CPUHP_TIMERS_PREPARE startup 回调 */
+
+/* CPUHP_BP_KICK_AP startup 回调：唤醒 AP */
 cpuhp_kick_ap_alive()->arch_cpuhp_kick_ap_alive()->native_kick_ap()->do_boot_cpu
 
+/* CPUHP_BRINGUP_CPU startup 回调：唤醒 AP 的 hotplug 线程，让 AP 执行剩余的 startup 回调 */
+cpuhp_bringup_ap()
+  cpuhp_kick_ap()
 
+/* CPUHP_AP_SCHED_STARTING startup 回调 */
+sched_cpu_starting()
+
+/* CPUHP_AP_HRTIMERS_DYING startup 回调：唤醒其他的注册过的与 hotplug 有关的 per-cpu 线程 */
+hrtimers_cpu_starting()
+
+/* CPUHP_AP_SMPBOOT_THREADS startup 回调 */
+smpboot_unpark_threads()
+
+...
+```
+
+AP 的启动
+
+```cpp
+start_secondary()
+```
+
+AP 的 hotplug 线程。
+
+```cpp
+smpboot_thread_fn()
+  while (1)
+    if (!thread_should_run():cpuhp_should_run())
+      schedule();
+    else
+      thread_fn():cpuhp_thread_fun()
+        st->should_run = cpuhp_next_state()
+	/* 调用回调 */
+	cpuhp_invoke_callback()
+        if (!st->should_run)
+          complete_ap_thread(st, bringup);
+```
+
+#### cpu offline
+
+```cpp
 /* echo 0 > /sys/devices/system/cpu/cpu1/online */
 online_store()->device_offline()->cpu_subsys_offline()
   cpu_device_down()->cpu_down(dev->id, CPUHP_OFFLINE)
