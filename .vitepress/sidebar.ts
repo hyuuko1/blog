@@ -114,7 +114,8 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
       items: [
         { text: "内存布局", link: "layout" },
         { text: "e820", link: "e820" },
-        { text: "node, zone", link: "node" },
+        { text: "node", link: "node" },
+        { text: "zone", link: "zone" },
         { text: "struct page/folio 详解", link: "folio" },
         {
           text: "pfn_to_page() 的原理：mem_section 与 vmemmap",
@@ -158,13 +159,20 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
         { text: "HugeTLB 大页内存", link: "hugetlb" },
         { text: "🚧 THP (Transparent Huge Page) 透明大页", link: "thp" },
         { text: "🚧 页面回收和交换", link: "swap" },
-        { text: "🚧 内存压缩", link: "compaction" },
         { text: "🚧 页面迁移", link: "migration" },
         { text: "🚧 KSM (Kernel Samepage Merging)", link: "ksm" },
         { text: "🚧 hotplug", link: "hotplug" },
         { text: "🚧 virtio mem", link: "virtio_mem" },
         { text: "🚧 virtio pmem", link: "virtio_pmem" },
         { text: "🚧 virtio balloon", link: "virtio_balloon" },
+      ],
+    },
+    {
+      text: "内存反碎片",
+      collapsed: false,
+      items: [
+        { text: "🚧 内存反碎片", link: "fragmentation" },
+        { text: "🚧 内存规整", link: "compaction" },
       ],
     },
     {

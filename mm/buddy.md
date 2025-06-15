@@ -6,6 +6,8 @@
 2. [深入理解 Linux 物理内存分配全链路实现 - 知乎](https://zhuanlan.zhihu.com/p/595356681)
 3. [深度剖析 Linux 伙伴系统的设计与实现 - 知乎](https://zhuanlan.zhihu.com/p/603268284)
 
+TODO 这几篇还没看完
+
 ## 概览
 
 1. buddy system 减缓内存外碎片问题
@@ -82,10 +84,9 @@ Node 1, zone   Normal           26         2020            2            0       
 
 写代码时，如果不要求连续内存，应优先多次 `alloc_page()` 分配多个分散的 0 阶页面。
 
-注意，以下都是宏，我写成了函数声明的形式。
+注意，以下实际上都是宏，但我写成了函数声明的形式。
 
 ```cpp
-
 struct page *alloc_page(gfp_t gfp)
 /* 从当前 cpu 最近的 node 申请物理页面 */
 struct page *alloc_pages(gfp_t gfp, unsigned int order)

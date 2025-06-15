@@ -1,0 +1,1 @@
+- [解决 Linux 内核问题实用技巧之 - Crash 工具结合/dev/mem 任意修改内存 - 知乎](https://zhuanlan.zhihu.com/p/669916249)

@@ -34,9 +34,11 @@
    9. [ ] zswap
 7. [ ] 内存热插拔
 8. [ ] mm cgroup
-9. 暂时不考虑
-   1. highmem，在 x86_64 里没有
-   2. 非易失性内存
+9. [ ] 内存 mirror
+10. [ ] Heterogeneous Memory Management (HMM)
+11. 暂时不考虑
+    1. highmem，在 x86_64 里没有
+    2. 非易失性内存
 
 ## 学习方法
 
@@ -139,6 +141,7 @@ Linux 把物理内存划分为三个层次来管理
 - 🌟 https://github.com/gatieme/LDD-LinuxDeviceDrivers/tree/master/study/kernel/02-memory
 - 🌟 [Linux 内存管理专题 - ArnoldLu - 博客园](https://www.cnblogs.com/arnoldlu/p/8051674.html)
   内容多，而且讲的很容易懂
+- 🌟[内存管理\_程序猿 Ricky 的日常干货的博客](https://blog.csdn.net/rikeyone/category_9282598.html)
 - http://www.biscuitos.cn/blog/BiscuitOS_Catalogue/
 - [tolimit - 博客园](https://www.cnblogs.com/tolimit)
 - [embedded guy 专栏文章目录 - 知乎](https://zhuanlan.zhihu.com/p/407097615)

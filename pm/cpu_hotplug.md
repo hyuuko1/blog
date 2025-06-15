@@ -2,8 +2,8 @@
 
 ## 参考
 
+- 🌟[CPU hotplug in the Kernel — The Linux Kernel documentation](https://docs.kernel.org/core-api/cpu_hotplug.html)
 - 🌟[Linux CPU core 的电源管理(5)\_cpu control 及 cpu hotplug](https://www.wowotech.net/pm_subsystem/cpu_hotplug.html)
-- [CPU hotplug in the Kernel — The Linux Kernel documentation](https://docs.kernel.org/core-api/cpu_hotplug.html)
 - [【原创】Linux cpu hotplug - LoyenWang - 博客园](https://www.cnblogs.com/LoyenWang/p/11397084.html)
 - [Linux 内核 | CPU 热插拔（Hotplug） - 一丁点儿的网络日志](https://www.dingmos.com/index.php/archives/117/)
 - [notes/kernel/cpu_hotplug.md · freelancer-leon/notes](https://github.com/freelancer-leon/notes/blob/master/kernel/cpu_hotplug.md)
@@ -11,14 +11,14 @@
 - [linux cpu 管理（四） cpu 热插拔 - 知乎](https://zhuanlan.zhihu.com/p/538782115)
 - [The usage of cpu hot(un)plug in QEMU - L](https://liujunming.top/2022/01/07/The-usage-of-cpu-hot-un-plug-in-QEMU/)
 
-## 概览
-
 ## 使用方法
 
 Linux 内核会创建虚拟总线 `cpu_subsys`，每个 CPU 注册的时候，都会挂载在该总线上，CPU 的 online 和 offline 的操作，最终会回调到该总线上的函数。
 
 ```bash
+# offline
 echo 0 > /sys/devices/system/cpu/cpu1/online
+# online
 echo 1 > /sys/devices/system/cpu/cpu1/online
 
 # 用 QEMU 验证热插拔功能
@@ -55,17 +55,93 @@ struct cpuhp_cpu_state：用来存储 hotplug 的状态；
 enum cpuhp_state：枚举各种状态，这个会对应到全局数组中的某一项，而该项中会定义回调函数。当然，也可以通过函数接口来设置回调函数。
 struct cpuhp_step：Hotplug state machine step，主要定义了函数指针，当跳转到某一个状态时会回调。
 
-### 代码分析
+### CPU hotplug 状态机
 
 ```cpp
 enum cpuhp_state {
+	CPUHP_INVALID = -1,
+
+	/* PREPARE section invoked on a control CPU */
 	CPUHP_OFFLINE = 0,
 	...
+	CPUHP_BP_PREPARE_DYN,
+	CPUHP_BP_PREPARE_DYN_END		= CPUHP_BP_PREPARE_DYN + 20,
+	CPUHP_BP_KICK_AP,
 	CPUHP_BRINGUP_CPU,
+
+	/*
+	 * STARTING section invoked on the hotplugged CPU in low level
+	 * bringup and teardown code.
+	 */
+	CPUHP_AP_IDLE_DEAD,
+	CPUHP_AP_OFFLINE,
+	...
+	CPUHP_AP_ONLINE,
+	CPUHP_TEARDOWN_CPU,
+
+	/* Online section invoked on the hotplugged CPU from the hotplug thread */
+	CPUHP_AP_ONLINE_IDLE,
+	...
+	CPUHP_AP_ONLINE_DYN,
+	CPUHP_AP_ONLINE_DYN_END		= CPUHP_AP_ONLINE_DYN + 40,
 	...
 	CPUHP_ONLINE,
 }
+
+/* 每个 cpuhp_state 有相应的 cpuhp_step */
+struct cpuhp_step {
+	const char		*name;
+	/* cpu online 时，进入某个 state 时，会调用相应的 startup 回调 */
+	union {
+		int		(*single)(unsigned int cpu);
+		int		(*multi)(unsigned int cpu,
+					 struct hlist_node *node);
+	} startup;
+	/* cpu offline 时，离开某个 state 时，会调用相应的 teardown 回调 */
+	union {
+		int		(*single)(unsigned int cpu);
+		int		(*multi)(unsigned int cpu,
+					 struct hlist_node *node);
+	} teardown;
+	/* private: */
+	struct hlist_head	list;
+	/* public: */
+	bool			cant_stop;
+	bool			multi_instance;
+};
+
+/* 大小 CPUHP_ONLINE 的数组 */
+static struct cpuhp_step cpuhp_hp_states[] = {
+	...
+}
 ```
+
+- control CPU: 发起并控制 online/offline 流程的 CPU。也被称为 BP
+- AP: 被 online/offline 的 CPU
+
+状态空间分为 3 部分：
+
+1. PREPARE
+
+   在 online 时，在 AP 启动之前，BP 需执行 startup 回调，做一些准备操作。例如：为 AP 创建 per-CPU hotplug 线程、初始化 per-CPU RCU data
+
+2. STARTING
+
+   AP 启动后，在关中断的状态下，会执行 startup 回调，
+
+3. ONLINE
+
+   AP 在 hotplug 线程的上下文中执行 startup 回调。
+
+### state 的静态分配与动态分配
+
+- `cpuhp_hp_states[]` 数组中的都是静态注册的，
+- CPUHP_BP_PREPARE_DYN，动态的，彼此没有顺序要求
+- CPUHP_AP_ONLINE_DYN，动态的，彼此没有顺序要求
+
+### Multi-Instance state
+
+## 代码分析
 
 #### cpu online
 
@@ -183,8 +259,8 @@ smpboot_thread_fn()
     else
       thread_fn():cpuhp_thread_fun()
         st->should_run = cpuhp_next_state()
-	/* 调用回调 */
-	cpuhp_invoke_callback()
+        /* 调用回调 */
+        cpuhp_invoke_callback()
         if (!st->should_run)
           complete_ap_thread(st, bringup);
 ```
@@ -225,3 +301,7 @@ struct smp_ops smp_ops = {
 ##
 
 CONFIG_HOTPLUG_PARALLEL
+
+## 其他
+
+- [Per-cpu 内存分配](../mm/percpu.md)

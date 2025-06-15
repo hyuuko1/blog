@@ -14,7 +14,7 @@ ip link set tap0 up master br0
 ip tuntap add mode tap user 1000 tap1
 ip link set tap1 up master br0
 
-# 如果不是网卡，那可以直接把网卡放进网桥，不需要 NAT 了
+# 如果不是wifi，那可以直接把网卡放进网桥，不需要 NAT 了
 # 清除网卡的 IP，添加进 br0
 # ip addr flush dev eth0
 # ip link set eth0 master br0
@@ -36,7 +36,9 @@ iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -j MASQUERADE
 # iptables -t nat -D POSTROUTING 1
 
 # 虚拟机内
-# ip addr add 10.0.0.2/24 dev eth0
-# ip link set dev eth0 up
+# ip addr add 10.0.0.2/24 dev enp0s1
+# ip link set dev enp0s1 up
 # ip route add default via 10.0.0.1
+# export http_proxy=http://10.0.0.1:7897
+# export https_proxy=http://10.0.0.1:7897
 # ping www.baidu.com

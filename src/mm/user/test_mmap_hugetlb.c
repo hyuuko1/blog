@@ -12,7 +12,7 @@ int test_anon_hugetlb(int flag) {
 
   /* 发生 fork 后，MAP_PRIVATE 发生 CoW，而 MAP_SHARED 的不会 */
   m = mmap(NULL, MAP_HUGE_2MB, PROT_READ | PROT_WRITE,
-           flag | MAP_ANONYMOUS | MAP_HUGETLB, 0, 0);
+           flag | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
   if (m == MAP_FAILED) {
     perror("mmap");
     exit(-1);

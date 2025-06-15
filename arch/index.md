@@ -8,7 +8,7 @@
 ## x86 文档
 
 - [Intel® 64 and IA-32 Architectures Software Developer Manuals](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html)
-  卷二是系统编程指南，1500 多页。
+  卷三是系统编程指南，1500 多页。
 - [AMD64 Architecture Programmer's Manual Volumes 1–5](https://www.amd.com/content/dam/amd/en/documents/processor-tech-docs/programmer-references/40332.pdf)
   感觉比 intel 的更易懂？卷二是系统编程指南，不到 900 页。
 - [80386 Programmer's Reference Manual](https://nju-projectn.github.io/i386-manual/)

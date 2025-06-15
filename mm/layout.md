@@ -113,7 +113,7 @@ $ cat /proc/iomem
   042b4000-047fffff : Kernel bss
 7ffdd000-7fffffff : Reserved
 80000000-afffffff : PCI Bus 0000:00	# 768MB
-b0000000-bfffffff : PCI ECAM 0000 [bus 00-ff]	# 256MB
+b0000000-bfffffff : PCI ECAM 0000 [bus 00-ff]	# 256MB = 2^16 个设备的 4KB 配置空间
   b0000000-bfffffff : Reserved
     b0000000-bfffffff : pnp 00:04
 c0000000-febfffff : PCI Bus 0000:00

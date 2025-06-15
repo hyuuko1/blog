@@ -1,5 +1,8 @@
 # swap
 
+- [Linux Swap Table Code Shows The Potential For Huge Performance Gains - Phoronix](https://www.phoronix.com/news/Linux-Swap-Table-Patches)
+  评论区讨论了挺多的。
+
 ## 参考
 
 - [linux 内存源码分析 - 内存碎片整理(同步关系) - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5432674.html)

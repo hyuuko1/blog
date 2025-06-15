@@ -52,8 +52,11 @@
 
 ## 一些我觉得质量很好的博客
 
+- [RedHat 的案例库](https://access.redhat.com/search/?q=Troubleshoot&documentKind=Article%26amp;Solution&p=1&rows=10)
 - [文章目录汇总 - kingdix10](https://zhuanlan.zhihu.com/p/641046393)
 - bin 的技术小屋
   - [聊聊 Linux 内核 - 微信公众号](https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzg2MzU3Mjc3Ng==&action=getalbum&album_id=2559805446807928833)
     内存管理，也有网络 IO 相关的。内核版本 v5.4
   - [聊聊 Linux 内核 - 知乎专栏](https://www.zhihu.com/column/c_1550511492654600192)
+
+## 多问 DeepSeek
