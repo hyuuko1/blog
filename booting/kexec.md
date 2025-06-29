@@ -62,7 +62,7 @@ main()
     break;
 ```
 
-## kexec_load() / kexec_file_load() 系统调用
+## 内核加载：kexec_load() / kexec_file_load() 系统调用
 
 kexec_file_load() 在内核内解析新内核，不像 kexec_load() 那样需要先在用户态解析新内核。
 
@@ -70,9 +70,18 @@ kexec 在内核加载阶段，于内存中创建了一张 控制表 control_code
 
 Kexec 会将用户传递的内核，initrd 等信息存储在 kexec_info 中的 segment 中，其中有很多代码都是在处理这部分内容。
 
+流程简述：
+
+1. vmalloc 申请两块内存，放置通过用户态传过来的 fd 读取的 linux/initrd image
+2. kzalloc 申请内存，放置 boot_params + cmdline + setup_data + efi_setup_data 等内容
+3. 将这 3 块内存地址用 `kexec_add_buffer()` 函数记录好 `ksegment->kbuf`，并从 iomem_resource 分配好最终拷贝到的连续内存 `ksegment->mem`。
+4. ...
+
 ```cpp
 struct kimage {
-        /* 一个数组 */
+        /* 指向一个 kimage_entry_t 数组 */
+	kimage_entry_t head;
+	/* 指向数组末尾的那个 entry */
         kimage_entry_t *entry;
 
 	struct kexec_segment segment[KEXEC_SEGMENT_MAX];
@@ -196,12 +205,77 @@ SYSCALL_DEFINE5(kexec_file_load, int kernel_fd, int initrd_fd,
 一些函数
 
 ```cpp
-/* 将一个 buffer 添加到 struct kimage 的 struct kexec_segment segment[KEXEC_SEGMENT_MAX]; 数组内
- * 还会查找一个内存区域，地址会赋值给 kbuf->mem 这个地址应该是 kexec -e 时，会拷贝到这个地址？
+/* 将一个 buffer 添加到 struct kimage 的 struct kexec_segment segment[KEXEC_SEGMENT_MAX]; 数组内。
+ * 还会从 iomem_resource 划分一个内存区域 kbuf->mem
+ * //XXX 如何确保和当前内核代码段之类的不重合的？
  *
  */
 int kexec_add_buffer(struct kexec_buf *kbuf)
+
+
+/* 我猜是这样的：因为我们大概率没法申请到一块那么大的空闲连续内存，所以先划分一块，
+ * 分配页面，把页面信息记录在 image->head 数组里，并把新内核拷贝到页面里。
+ *（如果页面恰好就在那块空闲连续内存里，那还会记录在 image->dest_pages 链表里）
+ * 到 machine_kexec()->relocate_kernel_ptr() 时，才把这些页面的内容拷贝到这块连续的内存。
+ * 而 crash kernel 不用这样做：我们已经为 crash kernel 预留了连续内存，可以在现在就直接拷贝过去。
+ */
+static int kimage_load_normal_segment(struct kimage *image, struct kexec_segment *segment)
 ```
+
+## 内核执行：reboot(LINUX_REBOOT_CMD_KEXEC) 系统调用
+
+```cpp
+SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd, void __user *, arg)
+  kernel_kexec()
+    kexec_in_progress = true;
+    kexec_in_progress = true;
+    kernel_restart_prepare("kexec reboot");
+    migrate_to_reboot_cpu();
+    syscore_shutdown();
+    cpu_hotplug_enable();
+    pr_notice("Starting new kernel\n");
+    machine_shutdown();
+    kmsg_dump(KMSG_DUMP_SHUTDOWN);
+    machine_kexec(kexec_image);
+      local_irq_disable();
+      control_page = page_address(image->control_code_page);
+      reloc_start = (unsigned long)__relocate_kernel_start;
+      relocate_kernel_ptr = control_page + (unsigned long)relocate_kernel - reloc_start;
+      load_segments(); /* 将 ds,es 等寄存器都置 0 */
+      relocate_kernel_ptr((unsigned long)image->head,
+			   virt_to_phys(control_page),
+			   image->start,
+			   image->preserve_context,
+			   host_mem_enc_active);
+```
+
+### relocate_kernel
+
+```asm
+/* arch/x86/kernel/relocate_kernel_64.S */
+SYM_CODE_START_NOALIGN(relocate_kernel)
+  movq	kexec_pa_table_page(%rip), %r9
+  movq	%r9, %cr3	/* 切换到恒等映射页表 */
+  ...
+  addq	$identity_mapped - 0b, %rsi
+  subq	$__relocate_kernel_start - 0b, %rsi
+  jmp	*%rsi		/* 得到 identity_mapped 符号的恒等映射地址并跳转 */
+SYM_CODE_START_LOCAL_NOALIGN(identity_mapped)
+  call	swap_pages
+SYM_CODE_START_LOCAL_NOALIGN(swap_pages)
+  /* 此时 rdi 是 kimage->head，指向页面 entry 数组。
+   * 下面的代码我就不细讲了，想从 enty 数组得到 source page，把内容拷贝到 swap page，
+   * 再把 destination page 拷贝到 source page，再把 swap page 拷贝到 destination page。
+   * 这样就完成了 source page 和 destination page 的交换。
+   */
+```
+
+- IND_INDIRECTION 类型代表这个指向一个页面，页面里才是真正的 entry。
+- IND_SOURCE 是在 `kimage_load_normal_segment()` 里分配的单个页面，包含了新内核等内容。
+- IND_DESTINATION 是在 `kexec_add_buffer` 时，从 iomem_resource 划分的连续内存里的页面。
+
+XXX 为什么要交换 IND_SOURCE 和 IND_DESTINATION，难道不是把 IND_SOURCE 拷贝到 IND_DESTINATION 就行吗？
+没太看懂，有空再细看。
 
 ### purgatory
 
@@ -290,7 +364,9 @@ Relocation section '.rela.rodata' at offset 0x3e48 contains 2 entries:
 
 ### arch/x86/kernel/relocate_kernel_64.S
 
-## reboot(LINUX_REBOOT_CMD_KEXEC) 系统调用
+### control page
+
+8KB，第一个 4KB 是页表，第二个 4KB 中的前 2KB 是代码，后 2KB 是栈。
 
 ```cpp
 
