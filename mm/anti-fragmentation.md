@@ -1,5 +1,7 @@
 # 内存反碎片技术
 
+这是一个大专题，本文只做概述。
+
 ## 参考
 
 - [Linux 内核 VS 内存碎片 （上） | PingCAP 平凯星辰](https://cn.pingcap.com/blog/linux-kernel-vs-memory-fragmentation-1/)
@@ -15,6 +17,11 @@
 - [对于 MIGRATE_MOVABLE 的理解\_movable migrate type-CSDN 博客](https://blog.csdn.net/rikeyone/article/details/105863277)
 - [内存管理中关于 Movable 的理解 - aspirs - 博客园](https://www.cnblogs.com/aspirs/p/12781693.html)
 - [linux kernel 内存碎片防治技术](https://www.wowotech.net/memory_management/memory-fragment.html)
+- [Linux 物理内存外碎片化浅析](https://blog.csdn.net/feelabclihu/article/details/107118409)
+
+##
+
+- [Fragmentation avoidance \[LWN.net\]](https://lwn.net/Articles/158211/)
 
 ## 相关
 
