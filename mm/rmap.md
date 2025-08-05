@@ -14,6 +14,7 @@ head:
   **整个演进历程讲的很好，必看**
 - 🌟[linux 内存源码分析 - 内存回收(匿名页反向映射) - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5398552.html)
   几乎每行都有注释
+- 🌟[\[内核内存\] 反向映射详解](https://blog.csdn.net/u010923083/article/details/116456497)
 - [【原创】（十五）Linux 内存管理之 RMAP - LoyenWang - 博客园](https://www.cnblogs.com/LoyenWang/p/12164683.html)
 - [Linux 内存管理 (12)反向映射 RMAP - ArnoldLu - 博客园](https://www.cnblogs.com/arnoldlu/p/8335483.html)
 - [内存管理特性分析（三）：linux 内核反向映射(RMAP)技术分析 - 知乎](https://zhuanlan.zhihu.com/p/564867734)

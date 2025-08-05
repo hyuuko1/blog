@@ -408,3 +408,15 @@ crash kernel
 - [Seamless_Kernel_Update.pdf](https://archive.fosdem.org/2022/schedule/event/security_seamless_kernel/attachments/slides/5061/export/events/attachments/security_seamless_kernel/slides/5061/Seamless_Kernel_Update.pdf)
   CRIU checkpoint/restore apps
 - [\[PATCH 1/2\] kexec: Add quick kexec support for kernel \[LWN.net\]](https://lwn.net/ml/linux-kernel/20200814055239.47348-1-sangyan@huawei.com/)
+
+## 学到的一些，没时间总结，先在这里记一下
+
+- kexec -l 并不会分配一整块连续的内存，而是申请许多单个 page，将内核和 initrd 拷贝进去，并划分一块大的连续物理内存（不是分配，是划分，这块连续大内存此时是正在被当前 OS 使用着的），在 kexec -e 时，会将内核和 initrd 从许多不连续的单个页面，拷贝到该连续大内存。然后执行该连续大内存里的代码。
+- kdump.service 等用户态的 kdump 服务，其原理就是 kexec -p，没做啥特殊的事情，命令行参数里一般会禁用许多特性，比如 iommu 之类。
+  kexec -p 依赖于内核已经用 crashkernel 预留了一块连续内存（会 memblock_reserve），这个内存可以 grep Crash /proc/iomem 看到。
+  cat /proc/iomem 看的是内核的 iomem_resource（这是一个树形结构），Crash kernel 对应的是 crashk_res。
+  当无法从 <4G 分配 crashkernel 时，会用到 crashk_low_res。
+- crash 要读原先 OS 的内存，并生成 vmcore，那 crash 是如何确保在启动时不会踩到原先 OS 的内存的？
+  答：crash 的 e820 table 是 kexec -p 时定制的。
+  crash_setup_memmap_entries() 会从 crashk_res 中去除掉 elf header 的部分后，作为 E820_TYPE_RAM。
+  注意，低 1M 也会被作为 E820_TYPE_RAM。

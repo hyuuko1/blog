@@ -7,6 +7,7 @@
 - [【原创】（十六）Linux 内存管理之 CMA - LoyenWang - 博客园](https://www.cnblogs.com/LoyenWang/p/12182594.html)
 - [Linux 中的 Memory Compaction \[二\] - CMA - 知乎](https://zhuanlan.zhihu.com/p/105745299)
 - [在 Linux 内核模块中使用 CMA 内存分配\_linux cma-CSDN 博客](https://blog.csdn.net/willhq/article/details/124602370)
+- [CMA技术原理分析-CSDN博客](https://blog.csdn.net/feelabclihu/article/details/129457653)
 
 ## 简介
 

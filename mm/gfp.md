@@ -1,6 +1,8 @@
 # GFP (Get Free Page)
 
-本篇文章讲解 `kmalloc(size_t size, gfp_t flags)` 的 flags 参数
+- 🌟 [Linux GFP Types](https://zhuanlan.zhihu.com/p/1921413069709485955)
+
+本篇文章讲解伙伴系统分配时的 flags 参数
 
 ```cpp
 #define GFP_ATOMIC	(__GFP_HIGH|__GFP_KSWAPD_RECLAIM)
@@ -18,6 +20,8 @@
 			 __GFP_NOMEMALLOC | __GFP_NOWARN) & ~__GFP_RECLAIM)
 #define GFP_TRANSHUGE	(GFP_TRANSHUGE_LIGHT | __GFP_DIRECT_RECLAIM)
 ```
+
+## `GFP_ZONE_TABLE`
 
 ## `GFP_ATOMIC`
 
@@ -77,3 +81,33 @@ __alloc_pages_noprof->__alloc_pages_slowpath->__alloc_pages_direct_reclaim->
 ## `GFP_NOIO`
 
 与 `GFP_NOFS` 类似
+
+## `__GFP_MOVABLE`
+
+函数 `gfp_migratetype()` 用来把 gfp_flags 转换成迁移类型
+
+- 使用标志 `__GFP_MOVABLE` 指定申请可移动页 `MIGRATE_MOVABLE`
+- 使用标志 `__GFP_RECLAIMABLE` 指定申请可回收页 `MIGRATE_RECLAIMABLE`
+- 如果没有指定这两个标志，表示申请不可移动页 `MIGRATE_UNMOVABLE`
+
+`__GFP_MOVABLE` 有两个作用
+
+1. 和 `__GFP_HIGHMEM` 组合表示从可移动区域分配物理页。
+2. 在根据可移动性分组技术中表示申请迁移类型是可移动类型的物理页 `MIGRATE_MOVABLE`。
+
+## `__GFP_RECLAIMABLE`
+
+当使用 `__GFP_RECLAIMABLE` 标志进行内存分配时，表示：“我分配的页面是可回收的，如果系统内存紧张，可以将其回收。”
+
+主要用于 slab 分配器中那些指定了 `SLAB_RECLAIM_ACCOUNT` 的内存分配（比如 sock_inode_cache），表明这些页面可以通过 shrinker 机制被释放。
+
+```cpp
+kvfree_rcu_init()
+  kfree_rcu_shrinker = shrinker_alloc(0, "slab-kvfree-rcu");
+  kfree_rcu_shrinker->count_objects = kfree_rcu_shrink_count;
+  kfree_rcu_shrinker->scan_objects = kfree_rcu_shrink_scan;
+
+do_shrink_slab()
+  count_objects:kfree_rcu_shrink_count()
+  scan_objects:kfree_rcu_shrink_scan()
+```

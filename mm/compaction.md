@@ -1,14 +1,16 @@
 # 内存规整
 
+- [linux 内存源码分析 - 内存碎片整理(实现流程) - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5286663.html)
+- [linux 内存源码分析 - 内存碎片整理(同步关系) - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5432674.html)
+- [超详细！Linux 内核内存规整详解](https://blog.csdn.net/feelabclihu/article/details/134343592)
+  /proc/vmstat
 - [\[内核内存\] \[arm64\] 内存规整 1---memory-compaction 详解](https://blog.csdn.net/u010923083/article/details/116137687)
 - [\[内核内存\] \[arm64\] 内存规整 2---页间内容的迁移（\_\_unmap_and_move 函数)](https://blog.csdn.net/u010923083/article/details/116138670)
 - [【原创】（九）Linux 内存管理 - zoned page frame allocator - 4 - LoyenWang - 博客园](https://www.cnblogs.com/LoyenWang/p/11746357.html)
 - [Linux 中的 Memory Compaction \[一\] - 知乎](https://zhuanlan.zhihu.com/p/81983973)
 - [Linux 中的 Memory Compaction \[二\] - CMA - 知乎](https://zhuanlan.zhihu.com/p/105745299)
 - [Linux 中的 Memory Compaction \[三\] - THP - 知乎](https://zhuanlan.zhihu.com/p/117239320)
-- [linux 内存源码分析 - 内存碎片整理(实现流程) - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5286663.html)
-- [linux 内存源码分析 - 内存碎片整理(同步关系) - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5432674.html)
-- [超详细！Linux 内核内存规整详解](https://blog.csdn.net/feelabclihu/article/details/134343592)
+- [LWN 717656: 主动（proactive）内存规整（compaction） - 泰晓科技](https://tinylab.org/lwn-717656/)
 
 Memory Compaction 可以分为两部分：
 
@@ -45,6 +47,164 @@ ed4a6d7f0676 mm: compaction: add /sys trigger for per-node memory compaction
 5e7719058079 mm: compaction: add a tunable that decides when memory should be compacted and when it should be reclaimed
 4f92e2586b43 mm: compaction: defer compaction using an exponential backoff when compaction fails
 ```
+
+## 页面迁移
+
+```cpp
+/* pageblock 的迁移类型。同一个 pageblock 内的所有 page 的迁移类型相同。 */
+enum migratetype {
+	MIGRATE_UNMOVABLE,
+	MIGRATE_MOVABLE,
+	MIGRATE_RECLAIMABLE,
+	MIGRATE_PCPTYPES,	/* the number of types on the pcp lists */
+	MIGRATE_HIGHATOMIC = MIGRATE_PCPTYPES,
+	MIGRATE_CMA,
+	MIGRATE_ISOLATE,	/* can't allocate from here */
+	MIGRATE_TYPES
+};
+
+enum migrate_mode {
+	MIGRATE_ASYNC,
+	MIGRATE_SYNC_LIGHT,
+	MIGRATE_SYNC,
+};
+```
+
+三种迁移模式
+
+- `MIGRATE_ASYNC`
+
+  最常用。在此模式中不会阻塞（但是时间片到了可以进行主动调度），
+  使用场景：kswapd 内核线程中只使用异步模式，不会使用同步模式。
+
+  只处理 MIGRATE_MOVABLE 和 MIGRATE_CMA 类型中的页。
+  不处理 MIGRATE_RECLAIMABLE 类型的页框，因为这部分页框很大可能导致回写然后阻塞。//XXX 不对吧？？MIGRATE_RECLAIMABLE 大多都是 Slab 啊，
+  MIGRATE_RECLAIMABLE 是可以回收，但是不可以迁移的，因此要回收后才能迁移？而回收可能会阻塞？
+
+  异步模式不会增加推迟计数器阀值。
+
+- `MIGRATE_SYNC_LIGHT`
+
+  轻同步模式。处理 MIGRATE_MOVABLE、MIGRATE_CMA 和 MIGRATE_RECLAIMABLE 类型的页。
+  使用场景：在内存不足以分配连续页框后导致内存碎片整理时，首先会进行异步的内存碎片整理，如果异步的内存碎片整理后还是不能够获取连续的页框(这种情况发生在很多离散的页的类型是 MIGRATE_RECLAIMABLE)，并且 gfp_mask 明确表示不处理透明大页的情况或者该进程是个内核线程时，则进行轻同步的内存碎片整理。
+
+  此模式下允许进行大多数操作的阻塞，比如在磁盘设备繁忙时，锁繁忙时，比如隔离了太多页，需要阻塞等待一段时间。
+  XXX 为啥会等待磁盘？隔离了太多页是什么意思？
+  但不会阻塞等待正在回写的页结束，对于正在回写的页直接跳过，也不会对脏页进行回写。
+  会处理匿名页和文件页，但是不会对脏文件页执行回写操作，而当处理的页正在回写时，也不会等待其回写结束。
+  XXX 我的理解是：干净的文件页会直接回收？脏的文件页会进行迁移？（但如果该脏页在写回，则会直接跳过，不等待回写结束）
+
+  轻同步模式会增加推迟计数器阀值。
+
+- `MIGRATE_SYNC`
+
+  所有操作都可以进行阻塞，并且会等待处理的页回写结束，并会对文件页、匿名页进行回写到磁盘，所以导致最耗费系统资源，对系统造成的压力最大。它会在三种情况下发生：
+
+  1. 从 cma 中分配内存时；
+  2. 调用 alloc_contig_range() 尝试分配一段指定了开始页框号和结束页框号的连续页框时；
+  3. 通过写入 1 到 sysfs 中的/vm/compact_memory 文件手动实现同步内存碎片整理。
+
+在 kswapd 中，永远只进行异步的内存碎片整理，不会进行同步的内存碎片整理，并且在 kswapd 中会跳过标记了 PB_migrate_skip 的 pageblock。
+相反，非 kswapd 中的内存碎片整理，当推迟次数超过了推迟阀值时，会将 pageblock 的 PB_migrate_skip 标记清除，也就是会扫描之前有 PB_migrate_skip 标记的 pageblock。
+XXX 谁置上 PB_migrate_skip 的？
+
+在同步内存碎片整理时，会忽略所有标记了 PB_migrate_skip 的 pageblock，强制对这段内存中所有 pageblock 进行扫描(当然除了 MIGRATE_UNMOVEABLE 的 pageblock)。
+
+匿名页可能被当成脏页！匿名页加入到了 swapcache，会被标记为了脏页！不过在内存碎片整理时，即使匿名页被标记为脏页也不会被回写，它只有在内存回收时才会对脏匿名页进行回写到 swap 分区。在脏匿名页进行回写到 swap 分区后，基本上此匿名页占用的页框也快被释放到伙伴系统中作为空闲页框了。
+
+## 碎片整理过程
+
+内存碎片整理是以 zone 为单位的，而 zone 中又以 pageblock 为单位。在内存碎片整理开始前，会在 zone 的头和尾各设置一个指针，头指针从头向尾扫描可移动的页，而尾指针从尾向头扫描空闲的页，当他们相遇时终止整理。
+
+1. 头指针每次扫描一个符合要求的 pageblock 里的所有的可移动的正在使用的页框。
+   “符合要求”是指：pageblock 是 MIGRATE_MOVABLE、MIGRATE_CMA、MIGRATE_RECLAIMABLE 类型，不是这些类型时，则会跳过，比如 MIGRATE_UNMOVABLE pageblock。
+2. 当扫描完这个 pageblock 后有可移动的页框时，会变为尾指针以 pageblock 为单位扫描可移动页框数量的空闲页框，在 pageblock 中也是从开始页框向结束页框进行扫描。
+3. 最后会将头指针扫描到的可移动页框内容复制到尾指针扫描到的空闲页框中。
+4. 然后重复 1 2 3 步，直到头尾指针相遇。
+
+---
+
+**内存碎片整理发生时机**
+
+1. 伙伴系统分配内存，进入慢速分配流程 `__alloc_pages_slowpath()`，若降低 watermak 值和进行 kswap 内存回收操作后，系统内存仍然吃紧，则伙伴系统会触发 memory-compaction。
+2. 当需要从指定地方获取连续页框，但是中间有页框正在使用时。（比如指定分配 ZONE_CMA 中的某段内存?）
+3. 因为内存短缺导致 kswapd 被唤醒时，在进行内存回收之后会进行内存碎片整理。
+4. 内存吃紧导致 kcompactd 线程唤醒触发内存碎片整理？
+5. 手动触发。
+   `echo 1 > /sys/devices/system/node/nodexx/compact` 对某个 node 上的 zone 进行内存碎片整理，或
+   `echo 1 > /proc/sys/vm/compact_memory` 对所有 zone 进行内存碎片整理。
+
+**系统判定是否执行内存碎片整理的标准**
+
+1. 在分配页框过程中，zone 显示是有足够的空闲页框供于本次分配的，但是伙伴系统链表中又没有连续页框段用于本次分配。原因就是过多分散的空闲页框，它们没办法组成一块连续页框存放在伙伴系统的链表中。
+2. 在 kswapd 唤醒后会对 zone 的页框阀值进行检查，如果可用页框少于高阀值则会进行内存回收，每次进行内存回收之后会进行内存碎片整理。
+
+即使满足标准，也不一定会执行内存碎片整理，具体见后面的内存碎片整理推迟和 compact_zone()函数。
+
+**内存碎片整理结束时机**
+
+在内存碎片整理中，一次 zone 的内存碎片整理结束条件有三条：
+
+1. 可移动页框扫描的位置是否已经超过了空闲页框扫描的位置，超过则结束整理，并且会重置 zone->compact_cached_free_pfn 和 zone->compact_cached_migrate_pfn，并且不是 kswap 时，会设置 zone->compact_blockskip_flush 为真
+2. zone 的空闲页框数量满足了条件：zone 的 low 阀值 + 此次要分配的页面数(1 << order) + zone 的保留页框数。
+3. 判断伙伴系统中是否有比 order 值大的空闲连续页框块，有则结束整理，如果 order 为-1，则忽略此条件
+
+不过有例外，通过写入到 /proc/sys/vm/compact_memory 进行强制内存碎片整理的情况，则判断条件只有第 1 条。对于 zone 来说，可移动页扫描和空闲页扫描交汇，也就是第一种情况时，才算是对 zone 进行了一次完整的内存碎片整理，这个完整的内存碎片整理并不代表一次内存碎片整理就能实现，也有可能是对 zone 进行多次内存碎片整理才达到的，因为每次内存碎片整理结束时机还有另外两种。当 zone 达到一次完整的内存碎片整理时，会重置两个扫描的起始为 zone 的第一个页和最后一个页，并且不是处于 kswap 中时，会设置 zone->compact_blockskip_flush 为真，这个 zone->compact_blockskip_flush 在 kswapd 准备睡眠时，会将 zone 的所有 pageblock 的 PB_migrate_skip 标志清除。
+
+---
+
+**内存碎片整理推迟机制**
+
+为什么要推迟？
+答：内存碎片整理是一个相当耗费资源的事情，它并不会经常会执行，即使因为内存短缺导致代码中经常调用到内存碎片整理函数，它也会根据调用次数选择性地忽略一些执行请求。
+
+具体点，内存碎片整理虽然是针对每个 zone 的，但是执行的时候传入的是一个 zonelist，这样就会有一种情况，就是可能某个 zone 刚进行过内存碎片整理，而系统因为内存不足又进行了内存碎片整理，导致这个刚进行内存碎片整理的 zone 又要执行内存碎片整理，为了避免这种情况，内核会为每个 zone 做一个整理推迟计数，这个计数是每个 zone 都会有的。
+
+```cpp
+struct zone {
+	/* 用于判断是否需要推迟，每次推迟会 ++，如果超过了 1 << compact_defer_shift 则进行整理 */
+	unsigned int		compact_considered;
+	/* 只有在同步和轻同步模式下进行内存碎片整理后，zone 的空闲页框数量没达到 (low阀值 + 1<<order + 保留内存) 时，才会 ++ */
+	unsigned int		compact_defer_shift;
+	/* 尝试碎片整理时的 order >= compact_order_failed 时，并且没超过推迟计数阈值，就会推迟，否则，就进行整理。
+	 * 如果 order >= compact_order_failed 时，整理成功，就将此值设置为 order+1，表明如果申请 order+1 可能会失败。*/
+	int			compact_order_failed;
+};
+```
+
+在 zone 执行内存碎片整理后，如果成功从此 zone 中分配到了 order 内存，就会重置 compact_considered 和 compact_defer_shift
+
+---
+
+**内存碎片整理扫描起始位置与 pageblock 的跳过**
+
+```cpp
+struct zone {
+	/* 空闲页框扫描起始位置，开始设置时是管理区的最后一个页框。
+	 * 在内存碎片整理扫描可以移动的页时，从本次内存碎片整理开始到此pageblock结束都没有隔离出可移动页时，会将此值设置为pageblock的最后一页。
+	 * 此值默认是zone的结束页框。
+	 */
+	unsigned long		compact_cached_free_pfn;
+	/* 0用于异步，1用于同步，用于保存管理区可移动页框扫描起始位置。
+	 * 在内存碎片整理扫描空闲页时，从本次内存碎片整理开始到此pageblock结束都没有隔离出空闲页时，会将此值设置为pageblock的最后一页。
+	 * 此值默认是zone的开始页框。
+	 */
+	unsigned long		compact_cached_migrate_pfn[ASYNC_AND_SYNC];
+	unsigned long		compact_init_migrate_pfn;
+	unsigned long		compact_init_free_pfn;
+};
+```
+
+对一个 pageblock 进行扫描后，如果无法从此 pageblock 隔离出一个要求的页框，这时候就会将此 pageblock 标记为跳过，主要通过设置 pageblock 在 zone 的 pageblock 位图中的 PB_migrate_skip 标志实现的。而标记之后会有两种情况：
+
+1. 本次内存碎片整理在之前的 pageblock 已经隔离出了此种页框(可移动页/空闲页)，这种情况就是设置 pageblock 的 PB_migrate_skip 标记。
+2. 本次内存碎片整理在之前的 pageblock 中没有隔离出过此种页框(可移动页/空闲页)，说明之前的 pageblock 都被标记了跳过，这种情况不止设置 pageblock 的 PB_migrate_skip 标记，还会设置对于的内存碎片整理扫描起始位置。
+
+对于第二种情况，以扫描可移动页为例子，本次内存碎片整理可移动页扫描是从 zone 的第一个页框开始，扫描完一个 pageblock 后，没有隔离出可移动页框，则标记此 pageblock 的跳过标记 PB_migrate_skip，然后将 zone->compact_cached_migrate_pfn 设置为此 pageblock 的结束页框，这样，在下次对此 zone 进行内存碎片整理时，就会直接从此 pageblock 的下一个 pageblock 开始，把此 pageblock 跳过了。同理，对于空闲页扫描也是一样。
+
+## kswapd
+
+详见 [swap](./swap.md)
 
 ## 数据结构
 

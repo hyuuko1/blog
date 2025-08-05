@@ -9,7 +9,12 @@
 - [\[PATCH 0/5\] Direct Migration V9: Overview - Christoph Lameter](https://lore.kernel.org/all/20060110224114.19138.10463.sendpatchset@schroedinger.engr.sgi.com/)
 - [宋宝华：论 Linux 的页迁移（Page Migration）完整版](https://cloud.tencent.com/developer/article/1681326)
 - [linux 那些事之页迁移(page migratiom) - yooooooo](https://www.cnblogs.com/linhaostudy/p/17647370.html)
+- [linux 内存源码分析 - 内存碎片整理(同步关系) - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5432674.html)
 - [\[内核内存\] \[arm64\] 内存规整 2---页间内容的迁移（\_\_unmap_and_move 函数)](https://blog.csdn.net/u010923083/article/details/116138670?spm=1001.2014.3001.5501)
+- [LWN: 让 ZONE_MOVABLE 更加名副其实！-CSDN 博客](https://blog.csdn.net/Linux_Everything/article/details/113667395)
+- [对于 ZONE_MOVABLE 的理解\_zone movable-CSDN 博客](https://blog.csdn.net/rikeyone/article/details/86498298)
+- [对于 MIGRATE_MOVABLE 的理解\_movable migrate type-CSDN 博客](https://blog.csdn.net/rikeyone/article/details/105863277)
+- [内存管理中关于 Movable 的理解 - aspirs - 博客园](https://www.cnblogs.com/aspirs/p/12781693.html)
 
 why？依赖于页面迁移的技术（具体可以看 `enum migrate_reason`）：
 
@@ -109,6 +114,13 @@ MPOL_MF_MOVE
 
 在系统长时间运行后，物理内存可能出现很多碎片，可用物理页很多，但是最大的连续物理内存可能只有一页。内存碎片对用户程序不是问题，因为用户程序可以通过页表把连续的虚拟页映射到不连续的物理页。但是内存碎片对内核是一个问题，因为内核使用直接映射的虚拟地址空间，连续的虚拟页必须映射到连续的物理页。
 
+简单来说，可迁移的页面不一定都在 ZONE_MOVABLE 中，但是 ZONE_MOVABLE 中的页面必须都是可迁移的。
+
+- 给用户分配的匿名页，使用的是 `GFP_HIGHUSER_MOVABLE` 包含了 `__GFP_HIGHMEM | __GFP_MOVABLE`，意味着可以从 ZONE_MOVABLE 分配。
+- 分配给内核使用的内存，都是不可移动的（因为存在线性映射，这个映射不能修改），所以不能从 ZONE_MOVABLE 分配。
+  - XXX vmalloc 分配的内存，不是线性映射的，应该可以移动？为什么不从 ZONE_MOVABLE 分配呢？为什么要用 GFP_KERNEL 呢？
+  - 分配大页时，ZONE_MOVABLE 的内存因为可以直接迁移，所以从 ZONE_MOVABLE 分配大页应该比较容易？
+
 ## migratetype
 
 为了预防内存碎片，内核根据可移动性把物理页分为 3 种类型（体现在：3 种类型的位于不同的 pcp list 里）。
@@ -153,11 +165,16 @@ enum migratetype {
 };
 ```
 
+MIGRATE_RECLAIMABLE 不可以迁移，但是可以回收，主要是 SLAB，而非 page cache。
+从 inode_init_always_gfp()->mapping_set_gfp_mask(mapping, GFP_HIGHUSER_MOVABLE) 克制 page cache 是 MIGRATE_MOVABLE，而不是 MIGRATE_RECLAIMABLE，很多博客文章都写错了。
+
 前面 3 种是真正的迁移类型，后面的迁移类型都有特殊用途： MIGRATE_HIGHATOMIC 用于高阶原子分配，MIGRATE_CMA 用于连续内存分配器，MIGRATE_ISOLATE 用来隔离物理页（由连续内存分配器、内存热插拔和从内存硬件错误恢复等功能使用）。
 
 pageblock_order 是按可移动性分组的阶数，简称分组阶数，可以理解为一种迁移类型的一个页块的最小长度。如果内核支持巨型页，那么 pageblock_order 是巨型页的阶数，否则 pageblock_order 是伙伴分配器的最大分配阶。
 
-TODO 疑问：为啥会有 pageblock 这种东西。
+同一个 pageblock 内的页面，迁移类型是相同的。
+
+TODO 疑问：为啥会有 pageblock 这种东西。有了 pageblock 后，就有很多连续 2M 的相同的迁移类型的页面，感觉确实有利于做页面迁移得到更多连续页。
 
 申请某种迁移类型的页时，如果这种迁移类型的页用完了，可以从其他迁移类型盗用（steal）物理页。
 如果需要从备用类型盗用物理页，那么从最大的页块开始盗用，以避免产生碎片。
@@ -173,7 +190,7 @@ static int fallbacks[MIGRATE_PCPTYPES][MIGRATE_PCPTYPES - 1] = {
 
 函数 `set_pageblock_migratetype()` 用来在页块标志位图中设置页块的迁移类型，函数 `get_pageblock_migratetype()` 用来获取页块的迁移类型。
 
-内核在初始化时，把所有页块初始化为可移动类型，其他迁移类型的页是盗用产生的。
+**内核在初始化时，把所有页块初始化为可移动类型，其他迁移类型的页是盗用产生的。**
 
 ```cpp
 memmap_init_zone_range()

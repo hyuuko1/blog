@@ -159,7 +159,6 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
         { text: "HugeTLB 大页内存", link: "hugetlb" },
         { text: "🚧 THP (Transparent Huge Page) 透明大页", link: "thp" },
         { text: "🚧 页面回收和交换", link: "swap" },
-        { text: "🚧 页面迁移", link: "migration" },
         { text: "🚧 KSM (Kernel Samepage Merging)", link: "ksm" },
         { text: "🚧 hotplug", link: "hotplug" },
         { text: "🚧 virtio mem", link: "virtio_mem" },
@@ -171,9 +170,15 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
       text: "内存反碎片",
       collapsed: false,
       items: [
-        { text: "🚧 内存反碎片", link: "fragmentation" },
+        { text: "🚧 内存反碎片", link: "anti-fragmentation" },
         { text: "🚧 内存规整", link: "compaction" },
+        { text: "🚧 页面迁移", link: "page_migration" },
       ],
+    },
+    {
+      text: "Non-Uniform Memory Access architecture",
+      collapsed: false,
+      items: [{ text: "🚧 Memory Policy 内存策略", link: "mempolicy" }],
     },
     {
       text: "内存管理与文件系统",

@@ -2,6 +2,9 @@
 
 ## 参考
 
+- [Linux page fault - 知乎](https://zhuanlan.zhihu.com/p/658583497)
+- [Linux anonymous page fault - 知乎](https://zhuanlan.zhihu.com/p/669335977)
+- [Linux file-backed page fault - 知乎](https://zhuanlan.zhihu.com/p/674910418)
 - [一文聊透 Linux 缺页异常的处理 —— 图解 Page Faults - 知乎](https://zhuanlan.zhihu.com/p/673410655)
 - 《Linux 内核深度解析》3.14 页错误异常处理
 

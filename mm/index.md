@@ -125,8 +125,14 @@ Linux 把物理内存划分为三个层次来管理
 
 ## 参考资料
 
+- 🌟<https://lwn.net/Kernel/Index/#Memory_management>
+- 🌟[Linux 内存管理 - 知乎](https://www.zhihu.com/column/c_1689945667877986304)
+  非常非常好
+- 🌟[Linux 内核 - 泰晓科技](https://tinylab.org/categories/#linux-%E5%86%85%E6%A0%B8-ref)
+  有许多 LWN 文章的翻译，质量很好，不仅仅只是简单的翻译。
 - 🌟[Memory Management Documentation — The Linux Kernel documentation](https://www.kernel.org/doc/html/latest/mm/index.html)
 - 🌟[Memory Management — The Linux Kernel documentation](https://www.kernel.org/doc/html/latest/admin-guide/mm/index.html)
+- 🌟[早起的虫儿有鹰吃-CSDN 博客](https://blog.csdn.net/u010923083)
 - 🌟《奔跑吧 Linux 内核 第二版卷一》由浅入深，适合入门，涉及的内容也很多
 - 🌟[内存管理 - 标签 - LoyenWang - 博客园](https://www.cnblogs.com/LoyenWang/tag/%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/) 有许多配图，非常棒！
 - 🌟[兰新宇 - 知乎](https://zhuanlan.zhihu.com/p/93289632) 非常推荐，会介绍演进/优化历史，不侧重代码
@@ -143,8 +149,9 @@ Linux 把物理内存划分为三个层次来管理
   内容多，而且讲的很容易懂
 - 🌟[内存管理\_程序猿 Ricky 的日常干货的博客](https://blog.csdn.net/rikeyone/category_9282598.html)
 - http://www.biscuitos.cn/blog/BiscuitOS_Catalogue/
-- [tolimit - 博客园](https://www.cnblogs.com/tolimit)
+- 🌟[tolimit - 博客园](https://www.cnblogs.com/tolimit)
 - [embedded guy 专栏文章目录 - 知乎](https://zhuanlan.zhihu.com/p/407097615)
+- [内存管理 - Hello-World3 - 博客园](https://www.cnblogs.com/hellokitty2/category/1951289.html)
 
 ## 代码行数统计
 

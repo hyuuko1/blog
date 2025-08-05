@@ -8,6 +8,8 @@
 
 TODO 这几篇还没看完
 
+- [ ] [\[内核内存\] \[arm64\] zone 区域的水线值(watermark)和保留内存值(lowmem_reserve)详解](https://blog.csdn.net/u010923083/article/details/115975292)
+
 ## 概览
 
 1. buddy system 减缓内存外碎片问题
@@ -320,6 +322,8 @@ __alloc_pages_slowpath()
 ```
 
 关于 `current_gfp_context()` 详见 [GFP (Get Free Page)](./gfp.md)
+
+慢速路径见[内存规整](./compaction.md)
 
 ### 释放页面
 
