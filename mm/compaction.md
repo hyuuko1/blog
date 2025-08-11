@@ -72,7 +72,7 @@ enum migrate_mode {
 
 三种迁移模式
 
-- `MIGRATE_ASYNC`
+- `MIGRATE_ASYNC` 称之为“非阻塞迁移”更合适
 
   最常用。在此模式中不会阻塞（但是时间片到了可以进行主动调度），
   使用场景：kswapd 内核线程中只使用异步模式，不会使用同步模式。
@@ -85,7 +85,8 @@ enum migrate_mode {
 
 - `MIGRATE_SYNC_LIGHT`
 
-  轻同步模式。处理 MIGRATE_MOVABLE、MIGRATE_CMA 和 MIGRATE_RECLAIMABLE 类型的页。
+  轻同步模式。处理 MIGRATE_MOVABLE、MIGRATE_CMA 和 MIGRATE_RECLAIMABLE 类型的页。//XXX 真的会处理 MIGRATE_RECLAIMABLE 吗？？？MIGRATE_RECLAIMABLE 会被跳过吧，或者是回收完成后作为空闲页。
+
   使用场景：在内存不足以分配连续页框后导致内存碎片整理时，首先会进行异步的内存碎片整理，如果异步的内存碎片整理后还是不能够获取连续的页框(这种情况发生在很多离散的页的类型是 MIGRATE_RECLAIMABLE)，并且 gfp_mask 明确表示不处理透明大页的情况或者该进程是个内核线程时，则进行轻同步的内存碎片整理。
 
   此模式下允许进行大多数操作的阻塞，比如在磁盘设备繁忙时，锁繁忙时，比如隔离了太多页，需要阻塞等待一段时间。
@@ -363,6 +364,20 @@ struct page *__alloc_pages_direct_compact()
 enum compact_result compact_zone(struct compact_control *cc, struct capture_control *capc)
 
 ```
+
+从上到下
+
+```
+     内存分配
+   compact reclaim
+reclaim  migrate
+```
+
+migrate reclaim compact 是三个比较大的模块，其中前两个更大，有更多模块依赖，而 compact 依赖前两个。
+先从 migrate 和 reclaim 学起，
+
+内存规整流程里，reclaim 会提升水线，但最后还是要用 get_page_from_freelist() 申请内存的。
+在 get_page_from_freelist() 里没申请到会尝试快速回收，如果还是不行，就返回，后面再尝试直接回收啥的。
 
 ## 到目前为止的变动
 
