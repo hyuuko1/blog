@@ -6,11 +6,11 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
-    "vitepress": "^1.5.0"
+    "vitepress": "latest"
   },
   "dependencies": {
-    "markdown-it-footnote": "^4.0.0",
-    "markdown-it-task-lists": "^2.1.1",
-    "vitepress-plugin-comment-with-giscus": "^1.1.15"
+    "markdown-it-footnote": "latest",
+    "markdown-it-task-lists": "latest",
+    "vitepress-plugin-comment-with-giscus": "latest"
   }
 }
