@@ -1,3 +1,0 @@
-Sitemap: https://hyuuko.vercel.app/sitemap.xml
-
-User-agent: *
