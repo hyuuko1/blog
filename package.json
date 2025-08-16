@@ -9,6 +9,7 @@
     "vitepress": "latest"
   },
   "dependencies": {
+    "dotenv": "^17.2.1",
     "markdown-it-footnote": "latest",
     "markdown-it-task-lists": "latest",
     "vitepress-plugin-comment-with-giscus": "latest"

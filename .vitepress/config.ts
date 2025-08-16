@@ -1,8 +1,18 @@
 import { createRequire } from "module";
 import { defineConfig } from "vitepress";
 import { nav, sidebar } from "./sidebar";
+import "dotenv/config";
 
 const require = createRequire(import.meta.url);
+
+// 需先在 vercel 设置环境变量
+const deploy_on_vercel = process.env.DEPLOY_ON_VERCEL;
+let site_base: string;
+if (deploy_on_vercel) {
+  site_base = "/";
+} else {
+  site_base = "/blog/";
+}
 
 // https://vitepress.dev/zh/reference/site-config
 export default defineConfig({
@@ -10,9 +20,17 @@ export default defineConfig({
   lang: "zh-Hans",
   description: "Linux kernel 内核代码分析，原理详解",
 
+  base: site_base,
+
   head: [
-    ["link", { rel: "icon", type: "image/svg+xml", href: "/linux.svg" }],
-    ["link", { rel: "icon", type: "image/png", href: "/linux-32x32.png" }],
+    [
+      "link",
+      { rel: "icon", type: "image/svg+xml", href: site_base + "linux.svg" },
+    ],
+    [
+      "link",
+      { rel: "icon", type: "image/png", href: site_base + "linux-32x32.png" },
+    ],
     ["meta", { name: "theme-color", content: "#5f67ee" }],
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { property: "og:locale", content: "zh_CN" }],
