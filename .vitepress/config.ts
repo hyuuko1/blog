@@ -10,6 +10,8 @@ export default defineConfig({
   lang: "zh-Hans",
   description: "Linux kernel 内核代码分析，原理详解",
 
+  base: "/blog/",
+
   head: [
     ["link", { rel: "icon", type: "image/svg+xml", href: "/linux.svg" }],
     ["link", { rel: "icon", type: "image/png", href: "/linux-32x32.png" }],
