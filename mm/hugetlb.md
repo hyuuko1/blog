@@ -4,6 +4,11 @@
 
 - 《Linux 内核深度解析》3.13 巨型页
 - [HugeTLB Pages — The Linux Kernel documentation](https://www.kernel.org/doc/html/latest/admin-guide/mm/hugetlbpage.html)
+- [Linux 内存管理：大页内存原理 - 知乎](https://zhuanlan.zhihu.com/p/356338438)
+- [内存管理特性分析（十二）:大页(huge pages)技术分析 - 知乎](https://zhuanlan.zhihu.com/p/609457879)
+- [【内核优化篇】大页 struct page 内存优化 87%+ ！HVO 最新优化进展与规划 - 知乎](https://zhuanlan.zhihu.com/p/614124664)
+- [关于 hugetlb vmemmap VHO 优化 patch 分析 - 知乎](https://zhuanlan.zhihu.com/p/613993560)
+- [再议关于 hugetlb vmemmap VHO 优化导致碎片化的问题 - 知乎](https://zhuanlan.zhihu.com/p/631529966)
 
 ## 概述
 
@@ -328,3 +333,7 @@ TODO
 
 - [ ] subpool 是啥
 - [ ] 为啥有时 ls /dev/hugepages 看不到文件
+- [ ] CONFIG_HUGETLB_PAGE_FREE_VMEMMAP_DEFAULT_ON 现在改名为了 CONFIG_HUGETLB_PAGE_OPTIMIZE_VMEMMAP_DEFAULT_ON
+      [围绕 HugeTLB 的极致优化 - 知乎](https://zhuanlan.zhihu.com/p/392703566)
+      [\[PATCH v23 0/9\] Free some vmemmap pages of HugeTLB page - Muchun Song](https://lore.kernel.org/all/20210510030027.56044-1-songmuchun@bytedance.com/)
+      改名：[\[PATCH 3/3\] mm: hugetlb_vmemmap: cleanup CONFIG_HUGETLB_PAGE_FREE_VMEMMAP\* - Muchun Song](https://lore.kernel.org/all/20220404074652.68024-4-songmuchun@bytedance.com/)
