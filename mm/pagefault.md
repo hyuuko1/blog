@@ -136,17 +136,17 @@ asm_exc_page_fault()
 
 ```cpp
 handle_mm_fault()
-  /* 大页 */
+  /* hugetlb 大页 */
   if (unlikely(is_vm_hugetlb_page(vma))) hugetlb_fault(vma->vm_mm, vma, address, flags);
-  else __handle_mm_fault(vma, address, flags); /* 普通页 */
+  else __handle_mm_fault(vma, address, flags); /* 普通页或 thp */
     pgd = pgd_offset(mm, address);
     p4d_alloc(mm, pgd, address); /* pgd 是 NULL 时才会 alloc */
     vmf.pud = pud_alloc(mm, p4d, address);
-    /* 尝试 pud huge page fault */
-    ...
+    /* 尝试 thp */
+    create_huge_pud(&vmf);
     vmf.pmd = pmd_alloc(mm, vmf.pud, address);
-    /* 尝试 pmd huge page fault */
-    ...
+    /* 尝试 thp */
+    create_huge_pmd(&vmf);
     handle_pte_fault(&vmf);
       if (unlikely(pmd_none(*vmf->pmd))) vmf->pte = NULL;
       else
@@ -284,6 +284,8 @@ setpte:
 3. 进程 `mmap(,,MAP_SHARED|MAP_ANONYMOUS)` 创建共享匿名映射，第一次访问时触发缺页异常
 
 函数 `do_fault()` 处理文件页和共享匿名页的缺页异常
+
+相关内容：[pagecache](../storage/pagecache.md)
 
 #### do_read_fault 处理读文件页错误
 

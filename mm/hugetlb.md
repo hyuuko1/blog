@@ -334,6 +334,8 @@ TODO
 - [ ] subpool 是啥
 - [ ] 为啥有时 ls /dev/hugepages 看不到文件
 - [ ] CONFIG_HUGETLB_PAGE_FREE_VMEMMAP_DEFAULT_ON 现在改名为了 CONFIG_HUGETLB_PAGE_OPTIMIZE_VMEMMAP_DEFAULT_ON
-      [围绕 HugeTLB 的极致优化 - 知乎](https://zhuanlan.zhihu.com/p/392703566)
-      [\[PATCH v23 0/9\] Free some vmemmap pages of HugeTLB page - Muchun Song](https://lore.kernel.org/all/20210510030027.56044-1-songmuchun@bytedance.com/)
-      改名：[\[PATCH 3/3\] mm: hugetlb_vmemmap: cleanup CONFIG_HUGETLB_PAGE_FREE_VMEMMAP\* - Muchun Song](https://lore.kernel.org/all/20220404074652.68024-4-songmuchun@bytedance.com/)
+  - [围绕 HugeTLB 的极致优化 - 知乎](https://zhuanlan.zhihu.com/p/392703566)
+  - [\[PATCH v23 0/9\] Free some vmemmap pages of HugeTLB page - Muchun Song](https://lore.kernel.org/all/20210510030027.56044-1-songmuchun@bytedance.com/)
+  - 改名：[\[PATCH 3/3\] mm: hugetlb_vmemmap: cleanup CONFIG_HUGETLB_PAGE_FREE_VMEMMAP\* - Muchun Song](https://lore.kernel.org/all/20220404074652.68024-4-songmuchun@bytedance.com/)
+  - [Re: \[PATCH v3 0/3\] A Solution to Re-enable hugetlb vmemmap optimize - Matthew Wilcox](https://lore.kernel.org/linux-mm/ZcT4DH7VE1XLBvVc@casper.infradead.org/)
+    在 arm 上因为一些原因开不了 HVO
