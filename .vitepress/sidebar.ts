@@ -187,7 +187,10 @@ function sidebarMM(): DefaultTheme.SidebarItem[] {
     {
       text: "其他",
       collapsed: false,
-      items: [{ text: "🚧 pageflags", link: "pageflags" }],
+      items: [
+        { text: "🚧 pageflags", link: "pageflags" },
+        { text: "🚧 madvise", link: "madvise" },
+      ],
     },
     {
       text: "Non-Uniform Memory Access architecture",
@@ -309,6 +312,7 @@ function sidebarDebug(): DefaultTheme.SidebarItem[] {
         { text: "Tips & Tricks", link: "tips" },
         { text: "vscode + gdb 调试 Linux 内核", link: "vscode-gdb" },
         { text: "GDB 用法", link: "gdb" },
+        { text: "Git 使用技巧", link: "git" },
       ],
     },
     {

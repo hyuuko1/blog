@@ -33,11 +33,18 @@
 - 2015-10-06 [\[PATCHv12 00/37\] THP refcounting redesign - Kirill A. Shutemov](https://lore.kernel.org/linux-mm/1444145044-72349-1-git-send-email-kirill.shutemov@linux.intel.com/)
   - 新的 refcount mapcout 方案
   - 支持 THP 的 PMD map 和 PTE map 共存
-- 2016-06-15 [\[PATCHv9-rebased2 00/37\] THP-enabled tmpfs/shmem using compound pages - Kirill A. Shutemov](https://lore.kernel.org/all/1466021202-61880-1-git-send-email-kirill.shutemov@linux.intel.com/)
+- 2016-03-07 [\[PATCHv2 0/4\] thp: simplify freeze_page() and unfreeze_page() - Kirill A. Shutemov](https://lore.kernel.org/linux-mm/1457351838-114702-1-git-send-email-kirill.shutemov@linux.intel.com/)
+  - 一个比较小的 patch set，在 split huge page 时，使用通用的 rmap walker，简化了 freeze_page() 和 unfreeze_page()。
+- May 11, 2016 [Transparent huge pages in the page cache \[LWN.net\]](https://lwn.net/Articles/686690/)
+- 2016-06-15 [\[PATCHv9-rebased2 00/37\] THP-enabled tmpfs/shmem using compound pages - Kirill A. Shutemov](https://lore.kernel.org/linux-mm/1466021202-61880-1-git-send-email-kirill.shutemov@linux.intel.com/)
   - tmpfs/shmem THP
 - 2022-11-03 [\[PATCH 0/3\] mm,huge,rmap: unify and speed up compound mapcounts - Hugh Dickins](https://lore.kernel.org/linux-mm/5f52de70-975-e94f-f141-543765736181@google.com/)
   - 简化 mapcount
 - May 21, 2024 [Facing down mapcount madness \[LWN.net\]](https://lwn.net/Articles/974223/)
+- 2024-02-26 [\[PATCH v5 0/8\] Split a folio to any lower order folios - Zi Yan](https://lore.kernel.org/linux-mm/20240226205534.1603748-1-zi.yan@sent.com/)
+  - 支持将 folio split 到任意 low order
+- 2025-03-07 [\[PATCH v10 0/8\] Buddy allocator like (or non-uniform) folio split - Zi Yan](https://lore.kernel.org/linux-mm/20250307174001.242794-1-ziy@nvidia.com/)
+  - 支持 non-uniform folio split
 - 2025-05-12 [\[PATCH v2 0/8\] ext4: enable large folio for regular files - Zhang Yi](https://lore.kernel.org/all/20250512063319.3539411-1-yi.zhang@huaweicloud.com/)
 
 ## 关键接口
@@ -159,7 +166,7 @@ create_huge_pmd()
 ### tmpfs/shmem THP
 
 - May 11, 2016 [Transparent huge pages in the page cache \[LWN.net\]](https://lwn.net/Articles/686690/)
-- 2016-06-06 [[PATCHv9 00/32] THP-enabled tmpfs/shmem using compound pages - Kirill A. Shutemov](https://lore.kernel.org/all/1465222029-45942-1-git-send-email-kirill.shutemov@linux.intel.com/)
+- 2016-06-15 [\[PATCHv9-rebased2 00/37\] THP-enabled tmpfs/shmem using compound pages - Kirill A. Shutemov](https://lore.kernel.org/linux-mm/1466021202-61880-1-git-send-email-kirill.shutemov@linux.intel.com/)
 
 ```cpp
 shmem_fault()->shmem_get_folio_gfp()->shmem_alloc_and_add_folio()
@@ -198,12 +205,15 @@ sys_write()->...->ext4_file_write_iter()->ext4_buffered_write_iter()->generic_pe
     folio = write_begin_get_folio(iocb, mapping, index, len);
       fgp_flags |= fgf_set_order(len);
       __filemap_get_folio()
+	folio = filemap_alloc_folio(alloc_gfp, order);
+	filemap_add_folio(mapping, folio, index, gfp)->__filemap_add_folio()
+	  XA_STATE_ORDER(xas, &mapping->i_pages, index, folio_order(folio));
+	  xas_store(&xas, folio); /* 放进 pagecache 了 */
   write_end():ext4_write_end()
-    /* 写完成后就给释放了？？没弄 pagecache 啥的吗 */
     folio_put(folio);
 ```
 
-在 `filemap_fault()` 的路径上的都是 0-order，也就是说，目前 mmap 文件页是不会 THP 的（tmpfs/shmem 应该除外？）。
+然而，在 `filemap_fault()` 的路径上的都是 0-order，也就是说，目前 mmap+pagefault 产生的文件页不会是 THP （tmpfs/shmem 除外）。
 
 ### munmap() THP 时
 
@@ -216,7 +226,10 @@ __split_vma()->vma_adjust_trans_huge()
 
 细节我放到后面讲吧
 
-### 其他场景
+### 拆分大页的场景
+
+- 内存回收时 `shrink_folio_list()` 在 swap 里 `folio_alloc_swap()` 分配失败，会 `split_folio_to_list()` 拆分大页，fallback 到 swap normal pages
+- `migrate_pages_batch()` 时，有个 `try_split_folio()`
 
 ## 内部实现
 
@@ -256,15 +269,47 @@ enum mapping_flags {
 
 ### pud/pmd 页表拆分
 
+```cpp
+__split_huge_pmd_locked()
+```
+
 对文件页的处理很简单，直接 folio_put 了，为啥？
 
 匿名页则是拆分成 pte
 
 ### large folio 拆分
 
-1. 支持拆分为指定 order
-2. 非均匀拆分
-3. deferred_split 机制
+发展历史
+
+1. 2010-11-03 [\[PATCH 00 of 66\] Transparent Hugepage Support #32 - Andrea Arcangeli](https://lore.kernel.org/all/patchbomb.1288798055@v2.random/) 这个我没看
+   1. 最初的大页拆分实现
+2. 2015-10-06 [\[PATCHv12 00/37\] THP refcounting redesign - Kirill A. Shutemov](https://lore.kernel.org/linux-mm/1444145044-72349-1-git-send-email-kirill.shutemov@linux.intel.com/)
+   1. [PATCHv12 29/37] thp: implement split_huge_pmd() 新的 PMD 页表拆分实现
+      1. 会 page_ref_add(page, HPAGE_PMD_NR - 1); 这是因为多出了 512 个 PTE 映射，少了 1 个 PMD 映射，而对 subpage 进行 get_page() 实际上是对 head page 操作的。
+   2. [PATCHv12 30/37] thp: add option to setup migration entries during PMD split
+      1. [ ] 没太明白为什么用 migration PTE entries 可以 stabilize page counts，这里差不多是相当于把页面放进了 swapcache？原因可能可以在 try_to_unmap 那里找到。
+   3. [PATCHv12 32/37] thp: reintroduce split_huge_page() 新的 THP 大页拆分实现
+      1. 持有 anon_vma 锁，因为接下来我们要 rmap walk 了
+      2. 检查是不是只有 caller 有额外的一个 refcount（也就是除了与 mapcount 一一对应的 refcount 以外，还有其他的 refcount，这也意味着现在页面被 pin 住了无法 migrate）
+      3. `freeze_page()`：这个函数名不够好，其实就是反向映射，并做页表拆分
+         1. 遍历 anon_vma 区间树，找到所有映射了该大页的 PMD 虚拟地址
+         2. `freeze_page_vma()` 拆分 PMD 页表。
+            1. 有可能已经 swap out 了，页表已经拆分了，这时则是处理这些 PTE swap entry。
+   4. [PATCHv12 34/37] thp: introduce deferred_split_huge_page() 首次支持延迟拆分大页。之前的问题？：在部分 unmap() 时，不拆分大页，可能导致 memory overhead。这个 patch 做的事情：把要拆分的大页放进一个队列，等内存回收时由 shrinker 来释放。
+      1. 对整个大页进行 page_remove_rmap() 时，或者只是对大页中的一个 subpage 进行 remove rmap 时（也就是部分 unmap 时），把 head page 放进队列。
+      2. 定义了一个 deferred_split_shrinker
+      3. 在大页拆分时，如果该大页在队列内，则将其从队列中移除。
+   5. [ ] mlocked THP
+3. 2016-03-07 [\[PATCHv2 0/4\] thp: simplify freeze_page() and unfreeze_page() - Kirill A. Shutemov](https://lore.kernel.org/linux-mm/1457351838-114702-1-git-send-email-kirill.shutemov@linux.intel.com/) 一个比较小的 patch set
+   1. 在大页拆分时，使用通用的 rmap walker `try_to_unmap()`，简化了 freeze_page() 和 unfreeze_page()
+      1. try_to_unmap() 见 https://www.cnblogs.com/tolimit/p/5432674.html
+   2. TTU_SPLIT_HUGE_PMD 会让 try_to_unmap 时先 split_huge_pmd_address() 拆分 PMD 页表
+   3. [ ] 何种情况下，在第一次 try_to_unmap() 后，tail page 的 page_count() 不为 1？为什么要再做一次 try_to_unmap()？
+4. 2016-06-15 [\[PATCHv9-rebased2 00/37\] THP-enabled tmpfs/shmem using compound pages - Kirill A. Shutemov](https://lore.kernel.org/linux-mm/1466021202-61880-1-git-send-email-kirill.shutemov@linux.intel.com/)
+   1. tmpfs/shmem THP
+   2. 大页拆分支持文件页
+5. 支持拆分为任意 lower order
+6. 非均匀拆分
 
 ### khugepaged 线程
 

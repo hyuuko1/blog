@@ -126,6 +126,7 @@ Linux 把物理内存划分为三个层次来管理
 ## 参考资料
 
 - 🌟<https://lwn.net/Kernel/Index/#Memory_management>
+- 🌟[LDD-LinuxDeviceDrivers/study/kernel/00-DESCRIPTION/MEMORY_MANAGER.md at master · gatieme/LDD-LinuxDeviceDrivers](https://github.com/gatieme/LDD-LinuxDeviceDrivers/blob/master/study/kernel/00-DESCRIPTION/MEMORY_MANAGER.md#72-%E9%80%8F%E6%98%8E%E5%A4%A7%E9%A1%B5%E7%9A%84%E6%94%AF%E6%8C%81)
 - 🌟[Linux 内存管理 - 知乎](https://www.zhihu.com/column/c_1689945667877986304)
   非常非常好
 - 🌟[Linux 内核 - 泰晓科技](https://tinylab.org/categories/#linux-%E5%86%85%E6%A0%B8-ref)

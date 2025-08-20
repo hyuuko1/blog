@@ -4,3 +4,10 @@
 - [Linux page flags - 知乎](https://zhuanlan.zhihu.com/p/713935921)
 - [Linux - 物理内存 - 知乎](https://zhuanlan.zhihu.com/p/664104444)
 - [Memory Management | What is the Utopian World!](https://utopianfuture.github.io/kernel/Memory-Management.html)
+
+```cpp
+/* 是否是 hugetlb */
+PageHuge()
+/* 是否是复合页，即，是否是 hugetlb 或 thp，与 PageCompound() 等同。 */
+PageTransCompound()
+```

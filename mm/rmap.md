@@ -126,14 +126,14 @@ rmap_walk_file()
   - 是一段虚拟地址区域，包含多个虚拟页面，这些虚拟页面可能还未映射到真正的物理页面，要 page fault 之后才会。
   - 对于私有匿名映射，在 fork 后，子进程的 VMA 里的虚拟页面与父进程映射到了同一个页面。发生 CoW 后，才会映射到不同的物理页面。
 - AV: `struct anon_vma` 是一个红黑树
-  - 当 VMA 范围内的虚拟页面有映射到实际的物理页面时，就会为 VMA 创建一个 VA。我觉得，可以认为是 VMA 拥有 VA
-  - VMA 会挂到 VA 红黑树上。
+  - 当 VMA 范围内的虚拟页面有映射到实际的物理页面时，就会为 VMA 创建一个 AV。我觉得，可以认为是 VMA “拥有” AV
+  - VMA 会挂到 AV 红黑树上。
   - 与 VMA 的数量比是 1:1。但是，一个 VMA 可以同时挂在不同的 AV 红黑树上。
 - AVC: `struct anon_vma_chain`
-  - 前面提到 VMA 可以挂到 AV 红黑树上，但是我们会发现 VMA 里只有一个 `struct rb_node`（被用于挂在到 i_mmap 上），并没有用于挂到 AV 红黑树上的 `struct rb_node`。
+  - 前面提到 VMA 可以挂到 AV 红黑树上，但是我们会发现 VMA 里只有一个 `struct rb_node`（被用于挂在到 address_space 的 i_mmap 上，不是用于匿名页用途的？），难道，并没有用于挂到 AV 红黑树上的 `struct rb_node`？
     那么，VMA 是如何挂到 AV 红黑树的呢？
-    答案就是通过 AVC！
-    AVC 里有 `struct rb_node`，挂到 AV 红黑树上。AVC 指向它所属的 VMA。因此在逻辑上可以认为是 VMA 挂在 AV 红黑树上。
+    答案就是通过 AVC 链表！！每个 VMA 都有一个 AVC 链表 `anon_vma_chain`（函数 `anon_vma_chain_link()` 往链表里添加新的 AVC）
+    每个 AVC 里有一个 `struct rb_node`，挂到 AV 红黑树上。AVC 指向它所属的 VMA。因此在逻辑上可以认为是 VMA 挂在 AV 红黑树上。
     我觉得，可以这样认为，VMA 拥有多个 AVC，通过 N 个 AVC，挂到 N 个不同的 AV 红黑树上。
   - 为什么不直接在 VMA 里新增一个 `struct rb_node` 用于挂到 AV 红黑树上呢？
     答：这样只能支持 VMA 挂到单个 AV 红黑树。为了支持挂到多个 AV 红黑树上，才引入了 AVC。
@@ -144,7 +144,7 @@ rmap_walk_file()
 首先，明确我们的需求：给定一个 folio，得到所有的有虚拟页面映射了该 folio 的 VMA。
 
 很容易想到，我们可以参考文件页的匿名映射。
-让每个匿名页都拥有一个链表，称之为 VA。
+让每个匿名页都拥有一个链表，称之为 AV。
 假设有 10 个 VMA，每个 VMA 里有 20 个虚拟页面。
 这 10 个 VMA 各自都有 1 个虚拟页面映射到了同一个匿名页，我们可以为这 10 个虚拟页面分配 10 个链表节点，都挂到该 AV 链表上。
 这样以来，给定一个 page，我们可以遍历这个页表，得到 10 个虚拟页面地址，然后做一些 unmap 之类的操作。
