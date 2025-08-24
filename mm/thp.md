@@ -50,7 +50,8 @@ mm/huge_mm.h mm/huge_memory.c
   - `move_huge_pmd()` 在 `move_page_tables()` 时用的，不懂。
   - `change_huge_pud()` `change_huge_pmd()` 给 mprotect 用的
   - `move_pages_huge_pmd()` 给 uffd 用的
-  - `vma_adjust_trans_huge()` split_vma() 等处理 vma 时用到的 thp: avoid breaking huge pmd invariants in case of vma_adjust failures https://lore.kernel.org/all/201012152357.oBFNvvvi013658@imap1.linux-foundation.org/
+  - `vma_adjust_trans_huge()` split_vma() 等拆分 vma 时，如果 huge pmd 跨过了 vma 边界，就会用此函数 split huge pmd。
+    - thp: avoid breaking huge pmd invariants in case of vma_adjust failures https://lore.kernel.org/all/201012152357.oBFNvvvi013658@imap1.linux-foundation.org/
   - `set_pmd_migration_entry()` `remove_migration_pmd()` 页面迁移场景
 - 进程 clone 场景
   - `copy_huge_pmd()` 进程 clone 场景，为啥比 `copy_huge_pud()` 复杂这么多？
@@ -254,6 +255,11 @@ __split_huge_pmd_locked()
 
 ### THP split
 
+分为两步：
+
+1. 反向遍历，拆分所有 PMD map
+2. 将 large folio 拆分为 small folios
+
 ### THP collapse: khugepaged 线程
 
 定期扫描，合并普通页为大页
@@ -273,6 +279,9 @@ __split_huge_pmd_locked()
 - 2010-11-03 [\[PATCH 00 of 66\] Transparent Hugepage Support #32 - Andrea Arcangeli](https://lore.kernel.org/all/patchbomb.1288798055@v2.random/)
   - 支持 anon THP
   - v33 https://lore.kernel.org/all/20101215051540.GP5638@random.random/
+  - thp: transparent hugepage core
+    - 处理 anon page fault 时，会预先分配好一个 PTE pagetable，存放到 mm_struct 粒度的链表里。现在这个函数叫做 `pgtable_trans_huge_deposit()`，与之相对应的函数是 `pgtable_trans_huge_withdraw()`，即存款和提款。
+    - zap_huge_pmd() 时，会把这个预留的 pagetalbe 释放掉。
 - 2014-11-11 [Transparent huge page reference counting \[LWN.net\]](https://lwn.net/Articles/619738/)
 - 2015-10-06 [\[PATCHv12 00/37\] THP refcounting redesign - Kirill A. Shutemov](https://lore.kernel.org/linux-mm/1444145044-72349-1-git-send-email-kirill.shutemov@linux.intel.com/)
   - 新的 refcount mapcout 方案
@@ -286,33 +295,72 @@ __split_huge_pmd_locked()
   - [PATCHv12 32/37] thp: reintroduce split_huge_page() 新的 THP 大页拆分实现
     1. 持有 anon_vma 锁，因为接下来我们要 rmap walk 了
     2. 检查是不是只有 caller 有额外的一个 refcount（也就是除了与 mapcount 一一对应的 refcount 以外，还有其他的 refcount，这也意味着现在页面被 pin 住了无法 migrate）
-    3. `freeze_page()`：这个函数名不够好，其实就是反向映射，并做页表拆分
-    4. 遍历 anon_vma 区间树，找到所有映射了该大页的 PMD 虚拟地址
-    5. `freeze_page_vma()` 拆分 PMD 页表。有可能已经 swap out 了，页表已经拆分了，这时则是处理这些 PTE swap entry。
+    3. `freeze_page()`：反向映射，拆分所有 PMD 页表。
+       1. 遍历 anon_vma 区间树，找到所有映射了该大页的 PMD 虚拟地址
+       2. `freeze_page_vma()` 拆分 PMD 页表。有可能已经 swap out 了，页表已经拆分了，这时则是处理这些 PTE swap entry。
+    4. `__split_huge_page()` 复合页拆成普通页。
   - [PATCHv12 34/37] thp: introduce deferred_split_huge_page() 首次支持延迟拆分大页。如果某个 THP 已经不存在 PMD map，如果其中某些 subpage 不存在 PTE map，那么这些 subpage 也许是可以被释放的（之所以说“也许”，是因为还要考虑到 refcount），这就需要先 split THP 拆成小页，然后才能释放。这个 patch 做的事情：在 subpage 也许可以被释放时，把要拆分的 THP 放进一个队列，等内存回收时由 shrinker 来释放。
     - 在 page_remove_rmap() PMD page 时，如果这是最后一个 unmap 的大页，并且有 nr 个 subpage 没有 PTE map，说明这 nr 个 subpage 可以被释放，把 THP 放进队列。
     - 在 page_remove_rmap() subpage 时，如果 unmap 该 subpage 后，该 subpage 的 mapcount 为 -1，这说明，首先，已经没有 PageDoubleMap 带来的 1 个 mapcount，即，该 THP 没有 PMD map 了，另外，还说明该 subpage 没有 PTE map 了。于是把 THP 放进队列。
     - 定义了一个 deferred_split_shrinker
     - 在拆分 THP 时，如果该大页在队列内，则将其从队列中移除。
-    - [ ] mlocked THP
+    - [ ] 对 mlocked THP 的处理
 - 2016-03-07 [\[PATCHv2 0/4\] thp: simplify freeze_page() and unfreeze_page() - Kirill A. Shutemov](https://lore.kernel.org/linux-mm/1457351838-114702-1-git-send-email-kirill.shutemov@linux.intel.com/)
   - 在大页拆分时，使用通用的 rmap walker `try_to_unmap()`，简化了 `freeze_page()` 和 `unfreeze_page()`
     - try_to_unmap() 见 https://www.cnblogs.com/tolimit/p/5432674.html
-  - TTU_SPLIT_HUGE_PMD 会让 try_to_unmap 时先 split_huge_pmd_address() 拆分 PMD 页表
-  - [ ] 何种情况下，在第一次 try_to_unmap() 后，tail page 的 page_count() 不为 1？为什么要再做一次 try_to_unmap()？
+  - TTU_SPLIT_HUGE_PMD 会让 try_to_unmap() 时先 split_huge_pmd_address() 拆分 PMD 页表。注意每次调用 try_to_unmap() 只会 unmap 一个 page 的所有反向映射，所以要调用 HPAGE_PMD_NR 次。
 - 2016-05-11 [Transparent huge pages in the page cache \[LWN.net\]](https://lwn.net/Articles/686690/)
 - 2016-06-15 [\[PATCHv9 00/32\] THP-enabled tmpfs/shmem using compound pages - Kirill A. Shutemov](https://lore.kernel.org/linux-mm/1465222029-45942-1-git-send-email-kirill.shutemov@linux.intel.com/)
   - 支持 tmpfs/shmem THP
-  - [\[PATCHv9 05/32\] rmap: support file thp - Kirill A. Shutemov](https://lore.kernel.org/linux-mm/1465222029-45942-6-git-send-email-kirill.shutemov@linux.intel.com/)
-    - 与 `page_add_anon_rmap()` 完全不同的是，`page_add_file_rmap()` 对于 THP 会把每个 subpage 的 mapcount 都 +1
+  - [PATCHv9 05/32] rmap: support file thp
+    - [ ] `page_add_file_rmap()` 对于 THP 会把每个 subpage 的 mapcount 都 +1。不理解为什不能和 `page_add_anon_rmap()` 一样，commit message 里说是后续再优化。
     - [ ] 不理解。PG_double_map 的优化对 file page 无效，这是因为 lifecycle 与 anon page 不同，file page 在没有 map 时还可以继续存在，随时再次被 map。
+  - thp: support file pages in zap_huge_pmd()
+  - thp: handle file pages in split_huge_pmd()
+    - 只做了 unmap，没有像 anon page 那样分配页表去填 PTE，因为 file page 可以等到 page fault 时再去填 PTE 页表。不理解，如果填 PTE 页表，避免后续可能的 pagefault 不是很好吗？
+  - thp: handle file COW faults
+    - split huge pmd 然后在 pte level 处理。因为不清楚在 private file page CoW 场景分配 huge page 的收益如何，可能是过度设计。
+  - thp: skip file huge pmd on copy_huge_pmd()
+    - 典型场景：进程 clone。对于 file pages，可以不 alloc pagetable，不 copy pte/pmd，可以在 pagefault 时做。copy_huge_pmd() 的调用路径只有 copy_page_range()，后者会使得没有 vma->anon_vma 的跳过 copy pte/pmd。但是因为 private file mapping 是可以有 anon_vma 的，所以没有跳过，这里选择了让 copy_huge_pmd() 通过 vma->vm_ops 把这种情况检查出来，跳过 private file huge pmd 的 copy。
+  - thp: file pages support for split_huge_page()
+    - [ ] radix tree 意味着有 HPAGE_PMD_NR 个额外的 refcount？
+    - thp 里的一些 subpages 可能超出了 i_size，将这些从 page cache 中移除。
+    - 为了 lockless，先 `page_ref_freeze()` 把 head page 的 refcount 置 0 了，所以会在 `__split_huge_page()` 里 `page_ref_inc(head);` 补回来。
+  - vmscan: split file huge pages before paging them out
+  - filemap: prepare find and delete operations for huge pages
+  - shmem: add huge pages support
 - 2022-11-03 [\[PATCH 0/3\] mm,huge,rmap: unify and speed up compound mapcounts - Hugh Dickins](https://lore.kernel.org/linux-mm/5f52de70-975-e94f-f141-543765736181@google.com/)
   - 优化 compound mapcount
   - 大页拆分支持文件页
+  - mm,thp,rmap: simplify compound page mapcount handling
+- 2022-11-22 [\[PATCH v2 0/3\] mm,thp,rmap: rework the use of subpages_mapcount - Hugh Dickins](https://lore.kernel.org/linux-mm/a5849eca-22f1-3517-bf29-95d982242742@google.com/)
+- 2024-04-09 [\[PATCH v1 00/18\] mm: mapcount for large folios + page_mapcount() cleanups - David Hildenbrand](https://lore.kernel.org/linux-mm/20240409192301.907377-1-david@redhat.com/)
 - 2024-05-21 [Facing down mapcount madness \[LWN.net\]](https://lwn.net/Articles/974223/)
+- 2023-07-10 [\[PATCH v4 0/9\] Create large folios in iomap buffered write path - Matthew Wilcox (Oracle)](https://lore.kernel.org/linux-fsdevel/20230710130253.3484695-1-willy@infradead.org/)
+- 2024-04-15 [\[PATCH v3 0/4\] mm/filemap: optimize folio adding and splitting - Kairui Song](https://lore.kernel.org/all/20240415171857.19244-1-ryncsn@gmail.com/)
 - 2024-02-26 [\[PATCH v5 0/8\] Split a folio to any lower order folios - Zi Yan](https://lore.kernel.org/linux-mm/20240226205534.1603748-1-zi.yan@sent.com/)
   - 支持将 folio split 到任意 low order
 - 2025-03-07 [\[PATCH v10 0/8\] Buddy allocator like (or non-uniform) folio split - Zi Yan](https://lore.kernel.org/linux-mm/20250307174001.242794-1-ziy@nvidia.com/)
   - 支持 non-uniform folio split
 - 2025-05-12 [\[PATCH v2 0/8\] ext4: enable large folio for regular files - Zhang Yi](https://lore.kernel.org/all/20250512063319.3539411-1-yi.zhang@huaweicloud.com/)
   - 为 ext4 regular files 支持 large folio
+- 2017-05-15 🚧 [\[PATCH -mm -v11 0/5\] THP swap: Delay splitting THP during swapping out - Huang, Ying](https://lore.kernel.org/linux-mm/20170515112522.32457-1-ying.huang@intel.com/)
+
+## huge_pmd 的增删改查
+
+- zap_huge_pmd() 清除 pmd 页表项，移除反向映射。
+  - 场景
+    - unmap_vmas 时，
+- split_huge_pmd()
+  - 场景
+    - `__split_vma()` 时
+- copy_huge_pmd()
+  - 场景
+    - 进程 clone
+- change_huge_pmd()
+
+## TODO vma
+
+- vma_adjust()
+- unmap_vmas()
+- ... 梳理各种 vma 操作。
