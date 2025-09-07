@@ -362,7 +362,7 @@ struct page *__alloc_pages_direct_compact()
 
 /* 内存规整核心函数，3 种触发方式最后都会调用该函数 */
 enum compact_result compact_zone(struct compact_control *cc, struct capture_control *capc)
-
+  migrate_pages()
 ```
 
 从上到下

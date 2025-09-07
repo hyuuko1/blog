@@ -18,6 +18,7 @@ head:
 - [【原创】（十五）Linux 内存管理之 RMAP - LoyenWang - 博客园](https://www.cnblogs.com/LoyenWang/p/12164683.html)
 - [Linux 内存管理 (12)反向映射 RMAP - ArnoldLu - 博客园](https://www.cnblogs.com/arnoldlu/p/8335483.html)
 - [内存管理特性分析（三）：linux 内核反向映射(RMAP)技术分析 - 知乎](https://zhuanlan.zhihu.com/p/564867734)
+- [linux 内存管理笔记(三十八）----反向映射-CSDN 博客](https://blog.csdn.net/u012489236/article/details/114734823)
 
 ## 概览
 
@@ -70,7 +71,7 @@ rmap_walk(folio, &rwc);
 
 ## 文件页的反向映射
 
-每个文件都拥有一个红黑树，名为 i_mmap，许多 VMA 挂在上面，排序依据是 VMA 起始位置在文件内的偏移（单位 4KB）。
+每个文件都拥有一个区间树（建立在红黑树之上的一种扩展数据结构），名为 i_mmap，许多 VMA 挂在上面，排序依据是 VMA 起始位置在文件内的偏移（单位 4KB）。
 
 ```cpp
 struct address_space {
@@ -121,22 +122,22 @@ rmap_walk_file()
 - page: `struct page` 代表物理页面
   - 作为匿名页时，指向一个 AV。
   - 多个匿名页可以共用一个 AV。**这么做的目的是为了节省内存**，设计成了这样子：被同一个 VMA 映射的 page 可以共用同一个 AV，当然有个例外是，如果该 page 是父进程 fork 之后还未 Cow 的，那该 page 用的是父进程的 AV。
-  - page 指向的 AV 是一个红黑树，通过遍历可以得到许多 VMA，这些 VMA 的虚拟页面**有可能**映射了该 page。
+  - page 指向的 AV 是一个区间树，通过遍历可以得到许多 VMA，这些 VMA 的虚拟页面**有可能**映射了该 page。
 - VMA: `struct vm_area_struct`
   - 是一段虚拟地址区域，包含多个虚拟页面，这些虚拟页面可能还未映射到真正的物理页面，要 page fault 之后才会。
   - 对于私有匿名映射，在 fork 后，子进程的 VMA 里的虚拟页面与父进程映射到了同一个页面。发生 CoW 后，才会映射到不同的物理页面。
-- AV: `struct anon_vma` 是一个红黑树
+- AV: `struct anon_vma` 是一个区间树
   - 当 VMA 范围内的虚拟页面有映射到实际的物理页面时，就会为 VMA 创建一个 AV。我觉得，可以认为是 VMA “拥有” AV
-  - VMA 会挂到 AV 红黑树上。
-  - 与 VMA 的数量比是 1:1。但是，一个 VMA 可以同时挂在不同的 AV 红黑树上。
+  - VMA 会挂到 AV 区间树上。
+  - 与 VMA 的数量比是 1:1。但是，一个 VMA 可以同时挂在不同的 AV 区间树上。
 - AVC: `struct anon_vma_chain`
-  - 前面提到 VMA 可以挂到 AV 红黑树上，但是我们会发现 VMA 里只有一个 `struct rb_node`（被用于挂在到 address_space 的 i_mmap 上，不是用于匿名页用途的？），难道，并没有用于挂到 AV 红黑树上的 `struct rb_node`？
-    那么，VMA 是如何挂到 AV 红黑树的呢？
+  - 前面提到 VMA 可以挂到 AV 区间树上，但是我们会发现 VMA 里只有一个 `struct rb_node`（被用于挂在到 address_space 的 i_mmap 上，不是用于匿名页用途的？），难道，并没有用于挂到 AV 区间树上的 `struct rb_node`？
+    那么，VMA 是如何挂到 AV 区间树的呢？
     答案就是通过 AVC 链表！！每个 VMA 都有一个 AVC 链表 `anon_vma_chain`（函数 `anon_vma_chain_link()` 往链表里添加新的 AVC）
-    每个 AVC 里有一个 `struct rb_node`，挂到 AV 红黑树上。AVC 指向它所属的 VMA。因此在逻辑上可以认为是 VMA 挂在 AV 红黑树上。
-    我觉得，可以这样认为，VMA 拥有多个 AVC，通过 N 个 AVC，挂到 N 个不同的 AV 红黑树上。
-  - 为什么不直接在 VMA 里新增一个 `struct rb_node` 用于挂到 AV 红黑树上呢？
-    答：这样只能支持 VMA 挂到单个 AV 红黑树。为了支持挂到多个 AV 红黑树上，才引入了 AVC。
+    每个 AVC 里有一个 `struct rb_node`，挂到 AV 区间树上。AVC 指向它所属的 VMA。因此在逻辑上可以认为是 VMA 挂在 AV 区间树上。
+    我觉得，可以这样认为，VMA 拥有多个 AVC，通过 N 个 AVC，挂到 N 个不同的 AV 区间树上。
+  - 为什么不直接在 VMA 里新增一个 `struct rb_node` 用于挂到 AV 区间树上呢？
+    答：这样只能支持 VMA 挂到单个 AV 区间树。为了支持挂到多个 AV 区间树上，才引入了 AVC。
 
 为了方便理解上面的这些设计，什么 AV、AVC 啥的，让我们先自己设计一下，看看有啥缺陷。
 注意：以下设计过程与真实的演进历史并不一样。
@@ -151,9 +152,9 @@ rmap_walk_file()
 有个明显的缺点：太浪费内存了，需要为每个页面映射分配内存。10 个 VMA 里共 200 个虚拟页面，如果都建立映射，就需要 200 个链表节点。
 
 我们可以修改需求，放宽一点：给定一个 folio，得到所有的、**可能**有虚拟页面映射了该 folio 的 VMA。
-然后，让被同一个 VMA 映射的匿名页共同拥一个 AV 红黑树，有个例外是，如果该 page 是父进程 fork 之后还未 Cow 的，那该 page 用的是父进程的 AV。AV 红黑树是 VMA 粒度的，为 VMA 创建 AV 后，会把 VMA 挂到红黑树上。这样以来，给定一个 page，就可以遍历红黑树得到 VMA，得到虚拟地址。
+然后，让被同一个 VMA 映射的匿名页共同拥一个 AV 区间树，有个例外是，如果该 page 是父进程 fork 之后还未 Cow 的，那该 page 用的是父进程的 AV。AV 区间树是 VMA 粒度的，为 VMA 创建 AV 后，会把 VMA 挂到区间树上。这样以来，给定一个 page，就可以遍历区间树得到 VMA，得到虚拟地址。
 
-当发生 fork 时，将父进程的 VMA 复制到子进程，子进程有了 10 个 VMA，然后为这 10 个 VMA 创建 10 个 AV，10 个 VMA 分别挂到 10 个 AV 上。由于我们并未为子进程分配物理页面，所以物理页面仍然是指向父进程的 AV 的，因此我们还要把子进程的 VMA 挂到父进程的 AV 上。这样一来，给定一个 page，我们可以遍历 AV 红黑树，得到父子进程的 VMA，进而得到两个虚拟地址。
+当发生 fork 时，将父进程的 VMA 复制到子进程，子进程有了 10 个 VMA，然后为这 10 个 VMA 创建 10 个 AV，10 个 VMA 分别挂到 10 个 AV 上。由于我们并未为子进程分配物理页面，所以物理页面仍然是指向父进程的 AV 的，因此我们还要把子进程的 VMA 挂到父进程的 AV 上。这样一来，给定一个 page，我们可以遍历 AV 区间树，得到父子进程的 VMA，进而得到两个虚拟地址。
 
 page1 发生 CoW 后，为子进程分配新的物理页面 page1_c，让该页面指向子进程自己的 AV。
 有个问题是，此时，对于父进程，给定 page1，遍历 AV，得到的仍然是两个 VMA，其中子进程的 VMA 已经不再映射到 page1 了而是 page1_c。
@@ -194,7 +195,7 @@ dup_mmap()
       /* 遍历父进程的 AVC */
       list_for_each_entry_reverse(pavc, &src->anon_vma_chain, same_vma)
         avc = anon_vma_chain_alloc(GFP_NOWAIT | __GFP_NOWARN);
-        /* 将新创建的 AVC 放进子进程 VMA 链表，但放进父进程 AV 红黑树 */
+        /* 将新创建的 AVC 放进子进程 VMA 链表，但放进父进程 AV 区间树 */
         anon_vma = pavc->anon_vma;
         anon_vma_chain_link(dst, avc, anon_vma);
     /* 子进程自己参创建新的 AV */
@@ -204,7 +205,7 @@ dup_mmap()
     anon_vma->root = pvma->anon_vma->root;
     anon_vma->parent = pvma->anon_vma;
     vma->anon_vma = anon_vma;
-    /* 将第二个 AVC 放进子进程自己的 VMA 链表，和自己的 AV 红黑树内 */
+    /* 将第二个 AVC 放进子进程自己的 VMA 链表，和自己的 AV 区间树内 */
     anon_vma_chain_link(vma, avc, anon_vma);
 ```
 
@@ -254,7 +255,7 @@ rmap_walk_anon()
 不管是文件页还是匿名页，遍历 i_mmap 或 anon_vma->rb_root 得到的 VMA 内不一定就真的映射了这个 folio，因为：
 
 1. 对于文件页，页面可能还不在 page cache 里
-2. 对于匿名页，子进程可能已经发生了 CoW，映射到了新分配的 page，此时子进程的发生 CoW 的页面所属的 VMA 还挂在父进程的 AV 红黑树上。
+2. 对于匿名页，子进程可能已经发生了 CoW，映射到了新分配的 page，此时子进程的发生 CoW 的页面所属的 VMA 还挂在父进程的 AV 区间树上。
 
 因此可以看到 `rmap_one` 钩子都会调用 `page_vma_mapped_walk()` 函数，如果 VMA 并没有映射这个 folio，就会直接返回。以 `try_to_unmap_one()` 为例：
 

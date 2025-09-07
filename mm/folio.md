@@ -4,6 +4,7 @@
 
 按照顺序把下列文章看完，本文就不用看了。
 
+- https://lwn.net/Kernel/Index/#Memory_management-Folios
 - [论好名字的重要性： Linux 内核 page 到 folio 的变迁 - OPPO 内核工匠](https://blog.csdn.net/feelabclihu/article/details/131485936)
 - [Linux Large Folios 大页在社区和产品的现状和未来 - OPPO 内核工匠](https://blog.csdn.net/feelabclihu/article/details/137983188)
   - large folio 带来的改进
@@ -90,6 +91,8 @@ static inline struct page *compound_head(struct page *page)
 		return (struct page *) (head - 1);
 	return page;
 }
+
+void prep_compound_page(struct page *page, unsigned int order)
 ```
 
 Linux 内核中，有使用 compound page 的地方：
@@ -155,6 +158,7 @@ folio_page(folio, n)这个 API 可以取出一个 folio 中的第 n 个 page。
 
 ## struct page
 
+- _The Linux Memory Manager_ 2.1 struct page
 - [ ] 对比 5.10 和 6.16 版本的，分析 page 剩余的字段。
 
 ```cpp
@@ -207,19 +211,39 @@ struct page {
 }
 ```
 
+`mapping` 字段的低 2 位，即与 `PAGE_MAPPING_FLAGS` 相与，表示 4 种类型。分别是：
+
+- 0 代表 `struct address_space`
+- FOLIO_MAPPING_ANON `struct anon_vma`
+- FOLIO_MAPPING_ANON_KSM 不存在这种情况？
+- FOLIO_MAPPING_KSM `struct ksm_stable_node` folio_set_stable_node()
+
+## struct ptdesc
+
+- pmd_huge_pte 预先分配的一个 pte page table
+- ptl 用于 PTE 页表锁
+
+## struct slab
+
 ## struct folio
 
 - mapping 字段
   - 如果是文件页。指向一个 `struct address_space`，表明所属的文件
   - 如果是匿名页。指向一个 `struct anon_vma`
 - index 字段
-  - 如果是文件页。这个就是文件内的偏移量，单位为 4KB。
+  - 如果是文件页。这个就是文件内的偏移量，pgoff，单位为 4KB。
   - 如果是匿名共享页。这个就是相对于 vma->vm_start 的偏移量
   - 如果是匿名私有页。这个就是虚拟页面号
 
 ```cpp
 folio_mapping
 ```
+
+- `deferred_list` 被 thp 使用，
+
+## pageflags
+
+[pageflags](./pageflags.md)
 
 ## refcount 和 mapcount
 

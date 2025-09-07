@@ -371,3 +371,51 @@ mm_core_init()
       所以 folio 和 compound page 啥关系？
 - [ ] ALLOC_HIGHATOMIC
 - [ ] 慢速路径。内存规整、回收
+
+## low memory reserve
+
+- _The Linux Memory Manager_ 2.4.1 Low memory reserve
+
+计算方式详见 [一步一图带你深入理解 Linux 物理内存管理 - 知乎](https://zhuanlan.zhihu.com/p/585395024)
+
+```bash
+$ sysctl vm.lowmem_reserve_ratio
+# ZONE_DMA	ZONE_DMA32	ZONE_NORMAL	ZONE_MOVABLE	ZONE_DEVICE
+# 1/256		1/256		1/32		0		0
+vm.lowmem_reserve_ratio = 256   256     32      0       0
+
+$ grep -E " zone|managed|protection" /proc/zoneinfo
+Node 0, zone      DMA
+        managed  3840
+	# 425531/256 = 1662
+	# 507737/256 = 1983
+	# 1662+1983 = 3645
+        protection: (0, 1662, 3645, 3645, 3645)
+Node 0, zone    DMA32
+        managed  425531
+        protection: (0, 0, 1983, 1983, 1983)
+Node 0, zone   Normal
+        managed  507737
+        protection: (0, 0, 0, 0, 0)
+Node 0, zone  Movable
+        managed  0
+        protection: (0, 0, 0, 0, 0)
+Node 0, zone   Device
+        managed  0
+        protection: (0, 0, 0, 0, 0)
+Node 1, zone      DMA
+        managed  0
+        protection: (0, 0, 0, 0, 0)
+Node 1, zone    DMA32
+        managed  0
+        protection: (0, 0, 0, 0, 0)
+Node 1, zone   Normal
+        managed  1031820
+        protection: (0, 0, 0, 0, 0)
+Node 1, zone  Movable
+        managed  0
+        protection: (0, 0, 0, 0, 0)
+Node 1, zone   Device
+        managed  0
+        protection: (0, 0, 0, 0, 0)
+```
