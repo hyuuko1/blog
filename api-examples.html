@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="zh-Hans" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Runtime API Examples | Blog</title>
+    <meta name="description" content="Linux kernel 内核代码分析，原理详解">
+    <meta name="generator" content="VitePress v2.0.0-alpha.11">
+    <link rel="preload stylesheet" href="/blog/assets/style.R9yU7ADD.css" as="style">
+    <link rel="preload stylesheet" href="/blog/vp-icons.css" as="style">
+    <script type="module" src="/blog/assets/chunks/metadata.d6189fa8.js"></script>
+    <script type="module" src="/blog/assets/app.CXJ_5nYp.js"></script>
+    <link rel="preload" href="/blog/assets/inter-roman-latin.Di8DUHzh.woff2" as="font" type="font/woff2" crossorigin="">
+    <link rel="modulepreload" href="/blog/assets/chunks/theme.Bjwy655u.js">
+    <link rel="modulepreload" href="/blog/assets/chunks/framework.CcbH9oJh.js">
+    <link rel="modulepreload" href="/blog/assets/api-examples.md.CPnhDsGk.lean.js">
+    <link rel="icon" type="image/svg+xml" href="/blog/linux.svg">
+    <link rel="icon" type="image/png" href="/blog/linux-32x32.png">
+    <meta name="theme-color" content="#5f67ee">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="zh_CN">
+    <meta property="og:title" content="Runtime API Examples | Blog">
+    <meta property="og:site_name" content="Linux kernel 内核代码分析，原理详解">
+    <meta property="og:url" content="https://hyuuko.vercel.app">
+    <meta name="google-site-verification" content="OMML6xlbLb2Asitovo85pbOZGTvYoWaYWYW3ps7083s">
+    <meta name="msvalidate.01" content="E3B108A75866D6C18B16BE35E14DE820">
+    <script id="check-dark-mode">(()=>{const e=localStorage.getItem("vitepress-theme-appearance")||"auto",a=window.matchMedia("(prefers-color-scheme: dark)").matches;(!e||e==="auto"?a:e==="dark")&&document.documentElement.classList.add("dark")})();</script>
+    <script id="check-mac-os">document.documentElement.classList.toggle("mac",/Mac|iPhone|iPod|iPad/i.test(navigator.platform));</script>
+  </head>
+  <body>
+    <div id="app"><div class="Layout" data-v-304c8b69><!--[--><!--]--><!--[--><span tabindex="-1" data-v-fcbfc0e0></span><a href="#VPContent" class="VPSkipLink visually-hidden" data-v-fcbfc0e0>Skip to content</a><!--]--><!----><header class="VPNav" data-v-304c8b69 data-v-d5bf7c8e><div class="VPNavBar" data-v-d5bf7c8e data-v-cb5e22fa><div class="wrapper" data-v-cb5e22fa><div class="container" data-v-cb5e22fa><div class="title" data-v-cb5e22fa><div class="VPNavBarTitle" data-v-cb5e22fa data-v-d4488dd0><a class="title" href="/blog/" data-v-d4488dd0><!--[--><!--]--><!--[--><img class="VPImage logo" src="/blog/linux.svg" width="20" height="20" alt data-v-ab19afbb><!--]--><span data-v-d4488dd0>Blog</span><!--[--><!--]--></a></div></div><div class="content" data-v-cb5e22fa><div class="content-body" data-v-cb5e22fa><!--[--><!--]--><div class="VPNavBarSearch search" data-v-cb5e22fa><!--[--><!----><div id="local-search"><button type="button" aria-label="搜索文档" aria-keyshortcuts="/ control+k meta+k" class="DocSearch DocSearch-Button"><span class="DocSearch-Button-Container"><span class="vpi-search DocSearch-Search-Icon"></span><span class="DocSearch-Button-Placeholder">搜索文档</span></span><span class="DocSearch-Button-Keys"><kbd class="DocSearch-Button-Key"></kbd><kbd class="DocSearch-Button-Key"></kbd></span></button></div><!--]--></div><nav aria-labelledby="main-nav-aria-label" class="VPNavBarMenu menu" data-v-cb5e22fa data-v-020be4db><span id="main-nav-aria-label" class="visually-hidden" data-v-020be4db> Main Navigation </span><!--[--><!--[--><a class="VPLink link VPNavBarMenuLink" href="/blog/mm/index" tabindex="0" data-v-020be4db data-v-815115f5><!--[--><span data-v-815115f5>内存管理</span><!--]--></a><!--]--><!--[--><a class="VPLink link VPNavBarMenuLink" href="/blog/net/index" tabindex="0" data-v-020be4db data-v-815115f5><!--[--><span data-v-815115f5>网络</span><!--]--></a><!--]--><!--[--><a class="VPLink link VPNavBarMenuLink" href="/blog/storage/index" tabindex="0" data-v-020be4db data-v-815115f5><!--[--><span data-v-815115f5>存储</span><!--]--></a><!--]--><!--[--><a class="VPLink link VPNavBarMenuLink" href="/blog/process/index" tabindex="0" data-v-020be4db data-v-815115f5><!--[--><span data-v-815115f5>进程</span><!--]--></a><!--]--><!--[--><a class="VPLink link VPNavBarMenuLink" href="/blog/irq/index" tabindex="0" data-v-020be4db data-v-815115f5><!--[--><span data-v-815115f5>中断</span><!--]--></a><!--]--><!--[--><a class="VPLink link VPNavBarMenuLink" href="/blog/arch/index" tabindex="0" data-v-020be4db data-v-815115f5><!--[--><span data-v-815115f5>体系结构</span><!--]--></a><!--]--><!--[--><a class="VPLink link VPNavBarMenuLink" href="/blog/debug/index" tabindex="0" data-v-020be4db data-v-815115f5><!--[--><span data-v-815115f5>调试</span><!--]--></a><!--]--><!--[--><a class="VPLink link VPNavBarMenuLink" href="/blog/virtualization/index" tabindex="0" data-v-020be4db data-v-815115f5><!--[--><span data-v-815115f5>虚拟化</span><!--]--></a><!--]--><!--[--><div class="VPFlyout VPNavBarMenuGroup" data-v-020be4db data-v-d8fae6e2><button type="button" class="button" aria-haspopup="true" aria-expanded="false" data-v-d8fae6e2><span class="text" data-v-d8fae6e2><!----><span data-v-d8fae6e2>杂项</span><span class="vpi-chevron-down text-icon" data-v-d8fae6e2></span></span></button><div class="menu" data-v-d8fae6e2><div class="VPMenu" data-v-d8fae6e2 data-v-fcd1d7a8><div class="items" data-v-fcd1d7a8><!--[--><!--[--><div class="VPMenuLink" data-v-fcd1d7a8 data-v-f2aefde6><a class="VPLink link" href="/blog/other/index" data-v-f2aefde6><!--[--><span data-v-f2aefde6>其他</span><!--]--></a></div><!--]--><!--[--><div class="VPMenuLink" data-v-fcd1d7a8 data-v-f2aefde6><a class="VPLink link" href="/blog/init/index" data-v-f2aefde6><!--[--><span data-v-f2aefde6>初始化</span><!--]--></a></div><!--]--><!--[--><div class="VPMenuLink" data-v-fcd1d7a8 data-v-f2aefde6><a class="VPLink link" href="/blog/pm/index" data-v-f2aefde6><!--[--><span data-v-f2aefde6>电源管理</span><!--]--></a></div><!--]--><!--]--></div><!--[--><!--]--></div></div></div><!--]--><!--]--></nav><!----><div class="VPNavBarAppearance appearance" data-v-cb5e22fa data-v-3f90c1a5><button class="VPSwitch VPSwitchAppearance" type="button" role="switch" title aria-checked="false" data-v-3f90c1a5 data-v-be9742d9 data-v-b4ccac88><span class="check" data-v-b4ccac88><span class="icon" data-v-b4ccac88><!--[--><span class="vpi-sun sun" data-v-be9742d9></span><span class="vpi-moon moon" data-v-be9742d9></span><!--]--></span></span></button></div><div class="VPSocialLinks VPNavBarSocialLinks social-links" data-v-cb5e22fa data-v-ef6192dc data-v-a1a7286e><!--[--><a class="VPSocialLink no-icon" href="https://github.com/hyuuko1/blog" aria-label="github" target="_blank" rel="me noopener" data-v-a1a7286e data-v-32d78712><span class="vpi-social-github"></span></a><!--]--></div><div class="VPFlyout VPNavBarExtra extra" data-v-cb5e22fa data-v-f953d92f data-v-d8fae6e2><button type="button" class="button" aria-haspopup="true" aria-expanded="false" aria-label="extra navigation" data-v-d8fae6e2><span class="vpi-more-horizontal icon" data-v-d8fae6e2></span></button><div class="menu" data-v-d8fae6e2><div class="VPMenu" data-v-d8fae6e2 data-v-fcd1d7a8><!----><!--[--><!--[--><!----><div class="group" data-v-f953d92f><div class="item appearance" data-v-f953d92f><p class="label" data-v-f953d92f>主题</p><div class="appearance-action" data-v-f953d92f><button class="VPSwitch VPSwitchAppearance" type="button" role="switch" title aria-checked="false" data-v-f953d92f data-v-be9742d9 data-v-b4ccac88><span class="check" data-v-b4ccac88><span class="icon" data-v-b4ccac88><!--[--><span class="vpi-sun sun" data-v-be9742d9></span><span class="vpi-moon moon" data-v-be9742d9></span><!--]--></span></span></button></div></div></div><div class="group" data-v-f953d92f><div class="item social-links" data-v-f953d92f><div class="VPSocialLinks social-links-list" data-v-f953d92f data-v-a1a7286e><!--[--><a class="VPSocialLink no-icon" href="https://github.com/hyuuko1/blog" aria-label="github" target="_blank" rel="me noopener" data-v-a1a7286e data-v-32d78712><span class="vpi-social-github"></span></a><!--]--></div></div></div><!--]--><!--]--></div></div></div><!--[--><!--]--><button type="button" class="VPNavBarHamburger hamburger" aria-label="mobile navigation" aria-expanded="false" aria-controls="VPNavScreen" data-v-cb5e22fa data-v-6bee1efd><span class="container" data-v-6bee1efd><span class="top" data-v-6bee1efd></span><span class="middle" data-v-6bee1efd></span><span class="bottom" data-v-6bee1efd></span></span></button></div></div></div></div><div class="divider" data-v-cb5e22fa><div class="divider-line" data-v-cb5e22fa></div></div></div><!----></header><div class="VPLocalNav empty fixed" data-v-304c8b69 data-v-6c0451ca><div class="container" data-v-6c0451ca><!----><div class="VPLocalNavOutlineDropdown" style="--vp-vh:0px;" data-v-6c0451ca data-v-92b7576c><button data-v-92b7576c>回到顶部</button><!----></div></div></div><!----><div class="VPContent" id="VPContent" data-v-304c8b69 data-v-2652e39a><div class="VPDoc has-aside" data-v-2652e39a data-v-d668f7cc><!--[--><!--]--><div class="container" data-v-d668f7cc><div class="aside" data-v-d668f7cc><div class="aside-curtain" data-v-d668f7cc></div><div class="aside-container" data-v-d668f7cc><div class="aside-content" data-v-d668f7cc><div class="VPDocAside" data-v-d668f7cc data-v-cb998dce><!--[--><!--]--><!--[--><!--]--><nav aria-labelledby="doc-outline-aria-label" class="VPDocAsideOutline" data-v-cb998dce data-v-c8b19031><div class="content" data-v-c8b19031><div class="outline-marker" data-v-c8b19031></div><div aria-level="2" class="outline-title" id="doc-outline-aria-label" role="heading" data-v-c8b19031>目录</div><ul class="VPDocOutlineItem root" data-v-c8b19031 data-v-b7d7ef80><!--[--><!--]--></ul></div></nav><!--[--><!--]--><div class="spacer" data-v-cb998dce></div><!--[--><!--]--><!----><!--[--><!--]--><!--[--><!--]--></div></div></div></div><div class="content" data-v-d668f7cc><div class="content-container" data-v-d668f7cc><!--[--><!--]--><main class="main" data-v-d668f7cc><div style="position:relative;" class="vp-doc _blog_api-examples external-link-icon-enabled" data-v-d668f7cc><div><h1 id="runtime-api-examples" tabindex="-1">Runtime API Examples <a class="header-anchor" href="#runtime-api-examples" aria-label="Permalink to “Runtime API Examples”">​</a></h1><p>This page demonstrates usage of some of the runtime APIs provided by VitePress.</p><p>The main <code>useData()</code> API can be used to access site, theme, and page data for the current page. It works in both <code>.md</code> and <code>.vue</code> files:</p><div class="language-md line-numbers-mode"><button title="Copy Code" class="copy"></button><span class="lang">md</span><pre class="shiki shiki-themes github-light github-dark" style="--shiki-light:#24292e;--shiki-dark:#e1e4e8;--shiki-light-bg:#fff;--shiki-dark-bg:#24292e;" tabindex="0" dir="ltr"><code><span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">&lt;script setup&gt;</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">import { useData } from &#39;vitepress&#39;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">const { theme, page, frontmatter } = useData()</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">&lt;/script&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-light-font-weight:bold;--shiki-dark:#79B8FF;--shiki-dark-font-weight:bold;">## Results</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-light-font-weight:bold;--shiki-dark:#79B8FF;--shiki-dark-font-weight:bold;">### Theme Data</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">&lt;pre&gt;{{ theme }}&lt;/pre&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-light-font-weight:bold;--shiki-dark:#79B8FF;--shiki-dark-font-weight:bold;">### Page Data</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">&lt;pre&gt;{{ page }}&lt;/pre&gt;</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#005CC5;--shiki-light-font-weight:bold;--shiki-dark:#79B8FF;--shiki-dark-font-weight:bold;">### Page Frontmatter</span></span>
+<span class="line"><span style="--shiki-light:#24292E;--shiki-dark:#E1E4E8;">&lt;pre&gt;{{ frontmatter }}&lt;/pre&gt;</span></span></code></pre><div class="line-numbers-wrapper" aria-hidden="true"><span class="line-number">1</span><br><span class="line-number">2</span><br><span class="line-number">3</span><br><span class="line-number">4</span><br><span class="line-number">5</span><br><span class="line-number">6</span><br><span class="line-number">7</span><br><span class="line-number">8</span><br><span class="line-number">9</span><br><span class="line-number">10</span><br><span class="line-number">11</span><br><span class="line-number">12</span><br><span class="line-number">13</span><br><span class="line-number">14</span><br><span class="line-number">15</span><br><span class="line-number">16</span><br></div></div><h2 id="results" tabindex="-1">Results <a class="header-anchor" href="#results" aria-label="Permalink to “Results”">​</a></h2><h3 id="theme-data" tabindex="-1">Theme Data <a class="header-anchor" href="#theme-data" aria-label="Permalink to “Theme Data”">​</a></h3><pre>{
+  &quot;logo&quot;: {
+    &quot;src&quot;: &quot;/linux.svg&quot;,
+    &quot;width&quot;: 20,
+    &quot;height&quot;: 20
+  },
+  &quot;editLink&quot;: {
+    &quot;pattern&quot;: &quot;https://github.com/hyuuko1/blog/edit/main/:path&quot;
+  },
+  &quot;nav&quot;: [
+    {
+      &quot;text&quot;: &quot;内存管理&quot;,
+      &quot;link&quot;: &quot;/mm/index&quot;,
+      &quot;activeMatch&quot;: &quot;/mm/&quot;
+    },
+    {
+      &quot;text&quot;: &quot;网络&quot;,
+      &quot;link&quot;: &quot;/net/index&quot;,
+      &quot;activeMatch&quot;: &quot;/net/&quot;
+    },
+    {
+      &quot;text&quot;: &quot;存储&quot;,
+      &quot;link&quot;: &quot;/storage/index&quot;,
+      &quot;activeMatch&quot;: &quot;/storage/&quot;
+    },
+    {
+      &quot;text&quot;: &quot;进程&quot;,
+      &quot;link&quot;: &quot;/process/index&quot;,
+      &quot;activeMatch&quot;: &quot;/process/&quot;
+    },
+    {
+      &quot;text&quot;: &quot;中断&quot;,
+      &quot;link&quot;: &quot;/irq/index&quot;,
+      &quot;activeMatch&quot;: &quot;/irq/&quot;
+    },
+    {
+      &quot;text&quot;: &quot;体系结构&quot;,
+      &quot;link&quot;: &quot;/arch/index&quot;,
+      &quot;activeMatch&quot;: &quot;/arch/&quot;
+    },
+    {
+      &quot;text&quot;: &quot;调试&quot;,
+      &quot;link&quot;: &quot;/debug/index&quot;,
+      &quot;activeMatch&quot;: &quot;/debug/&quot;
+    },
+    {
+      &quot;text&quot;: &quot;虚拟化&quot;,
+      &quot;link&quot;: &quot;/virtualization/index&quot;,
+      &quot;activeMatch&quot;: &quot;/virtualization/&quot;
+    },
+    {
+      &quot;text&quot;: &quot;杂项&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;其他&quot;,
+          &quot;link&quot;: &quot;/other/index&quot;,
+          &quot;activeMatch&quot;: &quot;/other/&quot;
+        },
+        {
+          &quot;text&quot;: &quot;初始化&quot;,
+          &quot;link&quot;: &quot;/init/index&quot;,
+          &quot;activeMatch&quot;: &quot;/init/&quot;
+        },
+        {
+          &quot;text&quot;: &quot;电源管理&quot;,
+          &quot;link&quot;: &quot;/pm/index&quot;,
+          &quot;activeMatch&quot;: &quot;/pm/&quot;
+        }
+      ]
+    }
+  ],
+  &quot;sidebar&quot;: {
+    &quot;/mm/&quot;: {
+      &quot;base&quot;: &quot;/mm/&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;前言&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;🚧 《Understanding the Linux Virtual Memory Manager》Linux 2.6&quot;,
+              &quot;link&quot;: &quot;gorman_book&quot;
+            }
+          ]
+        },
+        {
+          &quot;text&quot;: &quot;描述物理内存&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;内存布局&quot;,
+              &quot;link&quot;: &quot;layout&quot;
+            },
+            {
+              &quot;text&quot;: &quot;e820&quot;,
+              &quot;link&quot;: &quot;e820&quot;
+            },
+            {
+              &quot;text&quot;: &quot;node&quot;,
+              &quot;link&quot;: &quot;node&quot;
+            },
+            {
+              &quot;text&quot;: &quot;zone&quot;,
+              &quot;link&quot;: &quot;zone&quot;
+            },
+            {
+              &quot;text&quot;: &quot;struct page/folio 详解&quot;,
+              &quot;link&quot;: &quot;folio&quot;
+            },
+            {
+              &quot;text&quot;: &quot;pfn_to_page() 的原理：mem_section 与 vmemmap&quot;,
+              &quot;link&quot;: &quot;vmemmap&quot;
+            }
+          ]
+        },
+        {
+          &quot;text&quot;: &quot;虚拟内存映射&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;rmap 反向映射&quot;,
+              &quot;link&quot;: &quot;rmap&quot;
+            },
+            {
+              &quot;text&quot;: &quot;vma&quot;,
+              &quot;link&quot;: &quot;vma&quot;
+            },
+            {
+              &quot;text&quot;: &quot;mmap&quot;,
+              &quot;link&quot;: &quot;mmap&quot;
+            },
+            {
+              &quot;text&quot;: &quot;page fault&quot;,
+              &quot;link&quot;: &quot;pagefault&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 page table&quot;,
+              &quot;link&quot;: &quot;page_table&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 ioremap&quot;,
+              &quot;link&quot;: &quot;ioremap&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 fixmap&quot;,
+              &quot;link&quot;: &quot;fixmap&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 highmem 高端内存&quot;,
+              &quot;link&quot;: &quot;highmem&quot;
+            },
+            {
+              &quot;text&quot;: &quot;GUP (Get User Page)&quot;,
+              &quot;link&quot;: &quot;gup&quot;
+            },
+            {
+              &quot;text&quot;: &quot;GFP (Get Free Page)&quot;,
+              &quot;link&quot;: &quot;gfp&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 CoW (Copy on Write)&quot;,
+              &quot;link&quot;: &quot;cow&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 UFFD (userfaultfd)&quot;,
+              &quot;link&quot;: &quot;uffd&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 share memory&quot;,
+              &quot;link&quot;: &quot;shmem&quot;
+            },
+            {
+              &quot;text&quot;: &quot;mlock&quot;,
+              &quot;link&quot;: &quot;mlock&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 tlb&quot;,
+              &quot;link&quot;: &quot;tlb&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 dma-buf&quot;,
+              &quot;link&quot;: &quot;dma_buf&quot;
+            }
+          ]
+        },
+        {
+          &quot;text&quot;: &quot;内存分配&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;vmalloc: 不连续物理内存分配与 vmap&quot;,
+              &quot;link&quot;: &quot;vmalloc&quot;
+            },
+            {
+              &quot;text&quot;: &quot;per-cpu 变量的静态和动态分配&quot;,
+              &quot;link&quot;: &quot;percpu&quot;
+            },
+            {
+              &quot;text&quot;: &quot;Buddy System 伙伴系统: 物理页面分配&quot;,
+              &quot;link&quot;: &quot;buddy&quot;
+            },
+            {
+              &quot;text&quot;: &quot;OOM (Out Of Memory) Killer&quot;,
+              &quot;link&quot;: &quot;oom&quot;
+            },
+            {
+              &quot;text&quot;: &quot;SLUB 内存分配器&quot;,
+              &quot;link&quot;: &quot;slub&quot;
+            },
+            {
+              &quot;text&quot;: &quot;CMA 连续内存分配器&quot;,
+              &quot;link&quot;: &quot;cma&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 早期内存分配器 memblock&quot;,
+              &quot;link&quot;: &quot;memblock&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 页面回收和交换&quot;,
+              &quot;link&quot;: &quot;swap&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 KSM (Kernel Samepage Merging)&quot;,
+              &quot;link&quot;: &quot;ksm&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 hotplug&quot;,
+              &quot;link&quot;: &quot;hotplug&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 virtio mem&quot;,
+              &quot;link&quot;: &quot;virtio_mem&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 virtio pmem&quot;,
+              &quot;link&quot;: &quot;virtio_pmem&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 virtio balloon&quot;,
+              &quot;link&quot;: &quot;virtio_balloon&quot;
+            }
+          ]
+        },
+        {
+          &quot;text&quot;: &quot;大页&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;HugeTLB 标准大页&quot;,
+              &quot;link&quot;: &quot;hugetlb&quot;
+            },
+            {
+              &quot;text&quot;: &quot;THP (Transparent Huge Page) 透明大页&quot;,
+              &quot;link&quot;: &quot;thp&quot;
+            },
+            {
+              &quot;text&quot;: &quot;mTHP (Multi-size Transparent Huge Page)&quot;,
+              &quot;link&quot;: &quot;mthp&quot;
+            }
+          ]
+        },
+        {
+          &quot;text&quot;: &quot;内存反碎片&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;🚧 内存反碎片&quot;,
+              &quot;link&quot;: &quot;anti-fragmentation&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 内存规整&quot;,
+              &quot;link&quot;: &quot;compaction&quot;
+            },
+            {
+              &quot;text&quot;: &quot;页面迁移&quot;,
+              &quot;link&quot;: &quot;page_migration&quot;
+            },
+            {
+              &quot;text&quot;: &quot;内存回收&quot;,
+              &quot;link&quot;: &quot;reclaim&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 swap&quot;,
+              &quot;link&quot;: &quot;swap&quot;
+            }
+          ]
+        },
+        {
+          &quot;text&quot;: &quot;其他&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;pageflags&quot;,
+              &quot;link&quot;: &quot;pageflags&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 madvise&quot;,
+              &quot;link&quot;: &quot;madvise&quot;
+            }
+          ]
+        },
+        {
+          &quot;text&quot;: &quot;Non-Uniform Memory Access architecture&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;🚧 Memory Policy 内存策略&quot;,
+              &quot;link&quot;: &quot;mempolicy&quot;
+            }
+          ]
+        },
+        {
+          &quot;text&quot;: &quot;内存管理与文件系统&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;🚧 readahead 预读&quot;,
+              &quot;link&quot;: &quot;../storage/readahead&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 page cache&quot;,
+              &quot;link&quot;: &quot;../storage/pagecache&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 page writeback&quot;,
+              &quot;link&quot;: &quot;../storage/page_writeback&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 tmpfs&quot;,
+              &quot;link&quot;: &quot;../storage/tmpfs&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 ramfs&quot;,
+              &quot;link&quot;: &quot;../storage/ramfs&quot;
+            }
+          ]
+        }
+      ]
+    },
+    &quot;/net/&quot;: {
+      &quot;base&quot;: &quot;/net/&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;TCP/IP&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;收包流程&quot;,
+              &quot;link&quot;: &quot;rx&quot;
+            },
+            {
+              &quot;text&quot;: &quot;发包流程&quot;,
+              &quot;link&quot;: &quot;tx&quot;
+            }
+          ]
+        }
+      ]
+    },
+    &quot;/storage/&quot;: {
+      &quot;base&quot;: &quot;/storage/&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;Linux 内核文件系统&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;🚧 page cache&quot;,
+              &quot;link&quot;: &quot;pagecache&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 readahead 预读&quot;,
+              &quot;link&quot;: &quot;readahead&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 VFS&quot;,
+              &quot;link&quot;: &quot;vfs&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 tmpfs&quot;,
+              &quot;link&quot;: &quot;tmpfs&quot;
+            },
+            {
+              &quot;text&quot;: &quot;🚧 ramfs&quot;,
+              &quot;link&quot;: &quot;ramfs&quot;
+            }
+          ]
+        }
+      ]
+    },
+    &quot;/process/&quot;: {
+      &quot;base&quot;: &quot;/process/&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;调度&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;CFS&quot;,
+              &quot;link&quot;: &quot;CFS&quot;
+            },
+            {
+              &quot;text&quot;: &quot;EEVDF&quot;,
+              &quot;link&quot;: &quot;EEVDF&quot;
+            }
+          ]
+        }
+      ]
+    },
+    &quot;/irq/&quot;: {
+      &quot;base&quot;: &quot;/irq/&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;Linux IRQ&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;Linux IRQ&quot;,
+              &quot;link&quot;: &quot;irq&quot;
+            },
+            {
+              &quot;text&quot;: &quot;MSI-X&quot;,
+              &quot;link&quot;: &quot;msix&quot;
+            }
+          ]
+        }
+      ]
+    },
+    &quot;/arch/&quot;: {
+      &quot;base&quot;: &quot;/arch/&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;x86&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;base&quot;: &quot;/arch/x86/&quot;
+        },
+        {
+          &quot;text&quot;: &quot;ARM&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;base&quot;: &quot;/arch/arm/&quot;,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;AArch64虚拟内存系统架构&quot;,
+              &quot;link&quot;: &quot;virtual_memory&quot;
+            }
+          ]
+        }
+      ]
+    },
+    &quot;/debug/&quot;: {
+      &quot;base&quot;: &quot;/debug/&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;Debug&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;Tips &amp; Tricks&quot;,
+              &quot;link&quot;: &quot;tips&quot;
+            },
+            {
+              &quot;text&quot;: &quot;vscode + gdb 调试 Linux 内核&quot;,
+              &quot;link&quot;: &quot;vscode-gdb&quot;
+            },
+            {
+              &quot;text&quot;: &quot;GDB 用法&quot;,
+              &quot;link&quot;: &quot;gdb&quot;
+            },
+            {
+              &quot;text&quot;: &quot;Git 使用技巧&quot;,
+              &quot;link&quot;: &quot;git&quot;
+            }
+          ]
+        },
+        {
+          &quot;text&quot;: &quot;Tracing&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;bpftrace 用法&quot;,
+              &quot;link&quot;: &quot;bpf/bpftrace&quot;
+            }
+          ]
+        }
+      ]
+    },
+    &quot;/virtualization/&quot;: {
+      &quot;base&quot;: &quot;/virtualization/&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;QEMU-KVM&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;事件循环&quot;,
+              &quot;link&quot;: &quot;mainloop&quot;
+            },
+            {
+              &quot;text&quot;: &quot;内存虚拟化&quot;,
+              &quot;link&quot;: &quot;mm&quot;
+            }
+          ]
+        },
+        {
+          &quot;text&quot;: &quot;VFIO&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;vfio-pci&quot;,
+              &quot;link&quot;: &quot;vfio-pci&quot;
+            },
+            {
+              &quot;text&quot;: &quot;vfio-mdev&quot;,
+              &quot;link&quot;: &quot;vfio-mdev&quot;
+            }
+          ]
+        }
+      ]
+    },
+    &quot;/other/&quot;: {
+      &quot;base&quot;: &quot;/other/&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;其他&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;Linux 设备模型&quot;,
+              &quot;link&quot;: &quot;device_model&quot;
+            },
+            {
+              &quot;text&quot;: &quot;内核模块&quot;,
+              &quot;link&quot;: &quot;module&quot;
+            }
+          ]
+        }
+      ]
+    },
+    &quot;/init/&quot;: {
+      &quot;base&quot;: &quot;/init/&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;Linux 内核初始化&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;initcall&quot;,
+              &quot;link&quot;: &quot;initcall&quot;
+            }
+          ]
+        }
+      ]
+    },
+    &quot;/pm/&quot;: {
+      &quot;base&quot;: &quot;/pm/&quot;,
+      &quot;items&quot;: [
+        {
+          &quot;text&quot;: &quot;Linux 电源管理&quot;,
+          &quot;collapsed&quot;: false,
+          &quot;items&quot;: [
+            {
+              &quot;text&quot;: &quot;ACPI&quot;,
+              &quot;link&quot;: &quot;acpi&quot;
+            },
+            {
+              &quot;text&quot;: &quot;CPU 管理&quot;,
+              &quot;link&quot;: &quot;cpu&quot;
+            },
+            {
+              &quot;text&quot;: &quot;CPU 热插拔&quot;,
+              &quot;link&quot;: &quot;cpu_hotplug&quot;
+            }
+          ]
+        }
+      ]
+    }
+  },
+  &quot;search&quot;: {
+    &quot;provider&quot;: &quot;local&quot;,
+    &quot;options&quot;: {
+      &quot;detailedView&quot;: true,
+      &quot;locales&quot;: {
+        &quot;root&quot;: {
+          &quot;translations&quot;: {
+            &quot;button&quot;: {
+              &quot;buttonText&quot;: &quot;搜索文档&quot;,
+              &quot;buttonAriaLabel&quot;: &quot;搜索文档&quot;
+            },
+            &quot;modal&quot;: {
+              &quot;displayDetails&quot;: &quot;显示详细列表&quot;,
+              &quot;resetButtonTitle&quot;: &quot;清除查询条件&quot;,
+              &quot;noResultsText&quot;: &quot;无法找到相关结果&quot;,
+              &quot;footer&quot;: {
+                &quot;selectText&quot;: &quot;选择&quot;,
+                &quot;navigateText&quot;: &quot;切换&quot;,
+                &quot;closeText&quot;: &quot;关闭&quot;
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  &quot;socialLinks&quot;: [
+    {
+      &quot;icon&quot;: &quot;github&quot;,
+      &quot;link&quot;: &quot;https://github.com/hyuuko1/blog&quot;
+    }
+  ],
+  &quot;footer&quot;: {
+    &quot;message&quot;: &quot;Licensed under MIT&quot;,
+    &quot;copyright&quot;: &quot;Copyright © 2024-2025 HYUUKO&quot;
+  },
+  &quot;docFooter&quot;: {
+    &quot;prev&quot;: &quot;上一页&quot;,
+    &quot;next&quot;: &quot;下一页&quot;
+  },
+  &quot;outline&quot;: {
+    &quot;level&quot;: &quot;deep&quot;,
+    &quot;label&quot;: &quot;目录&quot;
+  },
+  &quot;lastUpdated&quot;: {
+    &quot;text&quot;: &quot;最后更新于&quot;,
+    &quot;formatOptions&quot;: {
+      &quot;dateStyle&quot;: &quot;short&quot;,
+      &quot;timeStyle&quot;: &quot;medium&quot;
+    }
+  },
+  &quot;externalLinkIcon&quot;: true,
+  &quot;langMenuLabel&quot;: &quot;多语言&quot;,
+  &quot;returnToTopLabel&quot;: &quot;回到顶部&quot;,
+  &quot;sidebarMenuLabel&quot;: &quot;菜单&quot;,
+  &quot;darkModeSwitchLabel&quot;: &quot;主题&quot;,
+  &quot;lightModeSwitchTitle&quot;: &quot;切换到浅色模式&quot;,
+  &quot;darkModeSwitchTitle&quot;: &quot;切换到深色模式&quot;
+}</pre><h3 id="page-data" tabindex="-1">Page Data <a class="header-anchor" href="#page-data" aria-label="Permalink to “Page Data”">​</a></h3><pre>{
+  &quot;title&quot;: &quot;Runtime API Examples&quot;,
+  &quot;description&quot;: &quot;&quot;,
+  &quot;frontmatter&quot;: {
+    &quot;outline&quot;: &quot;deep&quot;,
+    &quot;head&quot;: [
+      [
+        &quot;meta&quot;,
+        {
+          &quot;property&quot;: &quot;og:title&quot;,
+          &quot;content&quot;: &quot;Runtime API Examples | Blog&quot;
+        }
+      ]
+    ]
+  },
+  &quot;headers&quot;: [],
+  &quot;relativePath&quot;: &quot;api-examples.md&quot;,
+  &quot;filePath&quot;: &quot;api-examples.md&quot;,
+  &quot;lastUpdated&quot;: 1757770419000
+}</pre><h3 id="page-frontmatter" tabindex="-1">Page Frontmatter <a class="header-anchor" href="#page-frontmatter" aria-label="Permalink to “Page Frontmatter”">​</a></h3><pre>{
+  &quot;outline&quot;: &quot;deep&quot;,
+  &quot;head&quot;: [
+    [
+      &quot;meta&quot;,
+      {
+        &quot;property&quot;: &quot;og:title&quot;,
+        &quot;content&quot;: &quot;Runtime API Examples | Blog&quot;
+      }
+    ]
+  ]
+}</pre><h2 id="more" tabindex="-1">More <a class="header-anchor" href="#more" aria-label="Permalink to “More”">​</a></h2><p>Check out the documentation for the <a href="https://vitepress.dev/reference/runtime-api#usedata" target="_blank" rel="noreferrer">full list of runtime APIs</a>.</p></div></div></main><footer class="VPDocFooter" data-v-d668f7cc data-v-1bcd8184><!--[--><!--]--><div class="edit-info" data-v-1bcd8184><div class="edit-link" data-v-1bcd8184><a class="VPLink link vp-external-link-icon no-icon edit-link-button" href="https://github.com/hyuuko1/blog/edit/main/api-examples.md" target="_blank" rel="noreferrer" data-v-1bcd8184><!--[--><span class="vpi-square-pen edit-link-icon" data-v-1bcd8184></span> Edit this page<!--]--></a></div><div class="last-updated" data-v-1bcd8184><p class="VPLastUpdated" data-v-1bcd8184 data-v-1bb0c8a8>最后更新于: <time datetime="2025-09-13T13:33:39.000Z" data-v-1bb0c8a8></time></p></div></div><!----></footer><!--[--><!--]--></div></div></div><!--[--><!--]--></div></div><footer class="VPFooter" data-v-304c8b69 data-v-5b9946f5><div class="container" data-v-5b9946f5><p class="message" data-v-5b9946f5>Licensed under MIT</p><p class="copyright" data-v-5b9946f5>Copyright © 2024-2025 HYUUKO</p></div></footer><!--[--><!--]--></div></div>
+    
+    
+  </body>
+</html>
