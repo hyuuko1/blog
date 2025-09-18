@@ -1,28 +1,55 @@
 # Memory Reclaim
 
-- 🌟 [linux 内存回收 之 File page 的 lru list 算法原理 - 知乎](https://zhuanlan.zhihu.com/p/421298579)
-- 🌟 [Linux memory workingset 内存工作集 - 知乎](https://zhuanlan.zhihu.com/p/10798919273)
-- 🌟 [Linux page reclaim 内存回收 - 知乎](https://zhuanlan.zhihu.com/p/8073214749)
-- 🌟 [Linux memory watermark 内存水位 - 知乎](https://zhuanlan.zhihu.com/p/697378785)
-- 🌟 [Linux 内存调节之 zone watermark - 知乎](https://zhuanlan.zhihu.com/p/73539328)
-- 🌟 [一文讲透 MGLRU - 知乎](https://zhuanlan.zhihu.com/p/697963587)
-- 🌟 [linux 内存源码分析 - 内存回收(整体流程) - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5435068.html)
-  有错误。page cache 不是 MIGRATE_RECLAIMABLE，而是 MIGRATE_MOVABLE
-- 🌟 [linux 内存源码分析 - 内存回收(lru 链表) - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5447448.html)
-- 🌟 [linux 内存源码分析 - 直接内存回收中的等待队列 - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5481419.html)
-- 🌟 [关于 memcg 下 memory.reclaim 的一些想法 - 知乎](https://zhuanlan.zhihu.com/p/641355613)
-- [Linux Swap 与 Zram 详解 - 泰晓科技](https://tinylab.org/linux-swap-and-zram/)
-- [【原创】（十）Linux 内存管理 - zoned page frame allocator - 5 - LoyenWang - 博客园](https://www.cnblogs.com/LoyenWang/p/11827153.html)
+按顺序来看
+
+---
+
+介绍
+
+- [Linux 内存调节之 zone watermark - 知乎](https://zhuanlan.zhihu.com/p/73539328)
 - [Linux 中的内存回收 \[一\] - 知乎](https://zhuanlan.zhihu.com/p/70964195)
 - [Linux 中的内存回收 \[二\] - 知乎](https://zhuanlan.zhihu.com/p/72998605)
 - [Linux 内存回收之 drop cache - 知乎](https://zhuanlan.zhihu.com/p/93962657)
 - [Linux - 再议内存回收之 swappiness - 知乎](https://zhuanlan.zhihu.com/p/499738178)
+
+---
+
+- [Linux memory watermark 内存水位 - 知乎](https://zhuanlan.zhihu.com/p/697378785)
+- [Linux page reclaim 内存回收 - 知乎](https://zhuanlan.zhihu.com/p/8073214749)
+  - 触发路径
+  - 页面 active,inactive 平衡、 文件页&匿名页的平衡
+  - swappiness
+- [Linux memory workingset 内存工作集 - 知乎](https://zhuanlan.zhihu.com/p/10798919273)
+  - 有点抽象，很难看懂
+
+---
+
+- [linux 内存回收 之 File page 的 lru list 算法原理 - 知乎](https://zhuanlan.zhihu.com/p/421298579)
+  提到了 workingset
+- [一文讲透 MGLRU - 知乎](https://zhuanlan.zhihu.com/p/697963587)
+- [关于 memcg 下 memory.reclaim 的一些想法 - 知乎](https://zhuanlan.zhihu.com/p/641355613)
+- [Linux Swap 与 Zram 详解 - 泰晓科技](https://tinylab.org/linux-swap-and-zram/)
+
+---
+
+代码分析
+
+- [linux 内存源码分析 - 内存回收(整体流程) - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5435068.html)
+  有错误。page cache 不是 MIGRATE_RECLAIMABLE，而是 MIGRATE_MOVABLE
+- [linux 内存源码分析 - 内存回收(lru 链表) - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5447448.html)
+- [linux 内存源码分析 - 直接内存回收中的等待队列 - tolimit - 博客园](https://www.cnblogs.com/tolimit/p/5481419.html)
+
+---
+
+不推荐，想看就看吧
+
 - [\[内核内存\] \[arm64\] 内存回收 1---LRU 链表机制](https://blog.csdn.net/u010923083/article/details/116145038)
 - [\[内核内存\] \[arm64\] 内存回收 2---快速内存回收和直接内存回收](https://blog.csdn.net/u010923083/article/details/116278292)
 - [\[内核内存\] \[arm64\] 内存回收 3---kswapd 内核线程回收](https://blog.csdn.net/u010923083/article/details/116278405)
 - [\[内核内存\] \[arm64\] 内存回收 4---shrink_node 函数详解](https://blog.csdn.net/u010923083/article/details/116278456)
 - [\[内核内存\] \[arm64\] 内存回收 5---add_to_swap 函数详解](https://blog.csdn.net/u010923083/article/details/116301277)
 - [kswapd 介绍](https://blog.csdn.net/feelabclihu/article/details/124054410)
+- [【原创】（十）Linux 内存管理 - zoned page frame allocator - 5 - LoyenWang - 博客园](https://www.cnblogs.com/LoyenWang/p/11827153.html)
 
 ## 数据结构
 
@@ -187,118 +214,6 @@ nr_file_pages > nr_inactive_file + nr_active_file，
 
 先介绍核心框架里涉及的几个函数，而一些比较细节的函数，比如 prepare_scan_control()，先跳过放到后面再将，方便快速掌握核心流程。
 
-## 核心流程 shrink_node()
-
-分析最核心的 `shrink_node()`
-
-```cpp
-void shrink_node(pg_data_t *pgdat, struct scan_control *sc)
-  /* 初始化 scan_control 中的一些成员，这些成员的作用是平衡active/inactive和文件页/匿名页  */
-  prepare_scan_control(pgdat, sc);
-  /* 核心部分 */
-  shrink_node_memcgs(pgdat, sc);
-    /* 忽略掉 memory cgroup，最核心的就是这两个函数，回收 lru 链表上的页面、回收 slab */
-    shrink_lruvec()
-    shrink_slab()
-  flush_reclaim_state(sc);
-  /* TODO 后面的这些暂时忽略 */
-  ...
-```
-
-### `shrink_lruvec()`
-
-暂时忽略 MGLRU 和 memory cgroup
-
-```cpp
-/* 扫描并回收 lru 4 个链表上的页面 */
-shrink_lruvec()
-  /* 4 种 lru 类型的页面，我们接下来分别要扫描的数量。
-     扫描数量与 sc->priority 有关。
-     TODO 将来再详细分析 */
-  unsigned long nr[NR_LRU_LISTS];
-  unsigned long targets[NR_LRU_LISTS];
-  get_scan_count(lruvec, sc, nr);
-  memcpy(targets, nr, sizeof(nr));
-
-  /* 扫描完 3 个 nr 数量的页面时才停止扫描，注意这里并不需要扫描完 nr[LRU_ACTIVE_ANON] */
-  while (nr[LRU_INACTIVE_ANON] || nr[LRU_ACTIVE_FILE] || nr[LRU_INACTIVE_FILE])
-    for_each_evictable_lru(lru)
-      nr_to_scan = min(nr[lru], SWAP_CLUSTER_MAX); /* 每次循环最多扫描 32 个 */
-      nr[lru] -= nr_to_scan;
-      /* 扫描并回收。并返回成功回收的数量 */
-      nr_reclaimed += shrink_list(lru, nr_to_scan, lruvec, sc);
-      /* TODO 这里还会调整 nr[]，暂时略过。
-         哪些情况不会调整 nr[]：
-           如果成功回收的页面数量少于目标数量（在内存规整时，目标数量就是 1<<order）
-           或者是在 direct reclaim 场景 */
-      ...
-
-  /* 扫描结束，记录回收的页面数量 */
-  sc->nr_reclaimed += nr_reclaimed;
-  /* 如果可以老化匿名页，并且 inactive anon 很少，则将一部分 active 老化为 inactive */
-  if (...) shrink_active_list(LRU_ACTIVE_ANON)
-
-
-/* 回收某个 lru list 上的页面。
-   - active 会先老化为 inactive。而 inactive 会直接回收。
-   - for_each_evictable_lru() 是先 shrink_list(inactive)，让 inactive 变少，
-     再 shrink_list(active) 补充 inactive。为什么这么设计？ */
-shrink_list()
-  /* 对于 active，
-     - 如果允许回收 active file/anon，则将该 active file/anon 老化为 inactive。
-     - 否则就跳过，并 sc->skipped_deactivate = 1 记录下此次跳过。
-       后续：如果发现此次未完成回收目标，并发现此次跳过了回收 active，就会强制回收 active */
-  if is_active_lru(lru)
-    if (sc->may_deactivate & (1 << is_file_lru(lru)))
-      shrink_active_list()
-    else sc->skipped_deactivate = 1;
-
-  /* 对于 inactive，进行回收 */
-  shrink_inactive_list(nr_to_scan, lruvec, sc, lru)
-```
-
-**shrink_inactive_list(): 回收 inactive anon/file lru**
-
-```cpp
-shrink_inactive_list()
-  /* 扫描 nr_to_scan 个页面，并从 inactive lru 移除，移动到 folio_list 上。
-     返回的 nr_takenn 是 folio_list 上的 page 数量 */
-  LIST_HEAD(folio_list);
-  lru_add_drain();  /* XXX: 为什么不是 lru_add_drain_all() */
-  spin_lock_irq(&lruvec->lru_lock);
-  nr_taken = isolate_lru_folios(nr_to_scan, lruvec, &folio_list, &nr_scanned, sc, lru);
-  spin_unlock_irq(&lruvec->lru_lock);
-
-  /* 回收 folio */
-  shrink_folio_list(&folio_list, pgdat, sc, &stat, false, lruvec_memcg(lruvec));
-
-  /* 将未完成回收的 folio 放回 lru */
-  spin_lock_irq(&lruvec->lru_lock);
-  move_folios_to_lru(lruvec, &folio_list);
-  lru_note_cost_unlock_irq()
-
-
-/* 回收 folio
-   500多行，要吓晕了 */
-shrink_folio_list()
-  while (!list_empty(folio_list))
-    /* 从链表头摘下一个 folio。
-    - 进行 lock。因为之前我们是持锁 isolate_lru_folios() 的，因此不可能存在并发回收同一个 folio，
-      那可能就是有其他路径在操作这个 folio 了，这种情况下跳过该 folio。
-    - 如果是 unevictable 或者是 mlock 锁住不允许回收的，跳过，并可能移动到 active。
-    - 如果不允许回收已经被映射到用户空间的页面，跳过。在快速回收场景，这取决于 /proc/sys/vm/zone_reclaim_mode */
-    list_del(&folio->lru);
-    if (!folio_trylock(folio)) goto keep;
-    if (unlikely(!folio_evictable(folio))) goto keep_locked;
-    if (!sc->may_unmap && folio_mapped(folio)) goto keep_locked;
-```
-
-**shrink_active_list(): active anon/file 老化为 inactive anon/file**
-
-```cpp
-
-```
-
 ### `shrink_slab()`
 
 ## 深入细节
@@ -356,3 +271,82 @@ swappiness 可以提高匿名页的扫描比例，进一步促进系统回收更
 某个文件页的活跃程度是比某个匿名页要高的，但前者被回收了，后者没回收。
 
 回收数/扫描数，可以反映回收效率。
+
+##
+
+- 2013-05-13 [\[PATCH 3/4\] mm: Activate !PageLRU pages on mark_page_accessed if page is on local pagevec - Mel Gorman](https://lore.kernel.org/linux-mm/1368440482-27909-4-git-send-email-mgorman@suse.de/)
+- 2025-04-02 [\[PATCH v2 8/9\] mm: Remove swap_writepage() and shmem_writepage() - Matthew Wilcox (Oracle)](https://lore.kernel.org/all/20250402150005.2309458-9-willy@infradead.org/)
+  在 shrink_folio_list 时，只有 shmem 和 anon 会 pageout，而其他的，比如脏文件页不会 pageout
+
+##
+
+```cpp
+folio_mark_accessed()
+```
+
+##
+
+- 参考 _The Linux Memory Manager_ 2.6 GFP flags
+
+GFP flags，可以分为几类：
+
+- Physical address zone modifiers
+- Watermark modifiers 决定 watermark limit，以及如何使用 zone emergency reserves 内存
+  - `__GFP_HIGH` 高优先级，会 set `ALLOC_MIN_RESERVE`，允许使用 min watermak 的 50% 内存。
+  - `__GFP_MEMALLOC` 允许访问所有的内存。使用条件：当 caller 保证申请的内存很快会释放时，比如进程退出时等等（将来补充）
+  - `__GFP_NOMEMALLOC`
+
+```cpp
+/* caller 不能睡眠，高优先级，可以唤醒 kswapd（不能 direct reclaim，会导致睡眠） */
+#define GFP_ATOMIC	(__GFP_HIGH|__GFP_KSWAPD_RECLAIM)
+```
+
+alloc flags
+
+- ALLOC_NO_WATERMARKS
+
+## 页面分配
+
+watermak
+
+- low。作用：
+  - 如果分配内存会导致降低到 low 阈值之下，就 node_reclaim 快速回收内存，
+  - 如果快速回收后，仍然解决不了会降到 low 阈值之下这个问题，就进入 slowpath：
+    - 唤醒 kswapd 开始 indirect reclaim，直到升到 high 阈值才 kswapd 才停下
+    - 使用 min 阈值进行分配内存。
+- min。作用：
+  - 使用 min 阈值进行分配内存时，如果分配内存会导致降低到 low 阈值之下，进行 direct reclaim
+
+还有 emergency reserves 内存？
+
+```cpp
+/* 这里的 frozen 的含义是：还未对分配得到的 page 进行 set_page_refcounted() 将 refcount 置 1，
+   详见 https://lore.kernel.org/linux-mm/20241125210149.2976098-14-willy@infradead.org/ */
+__alloc_frozen_pages_noprof()
+  /* get_page_from_freelist() 从 zone 分配内存时，
+     会先计算出，分配 order 后，zone 内剩余内存 free_pages，如果 free_pages <= 水线+保留内存，
+     就 node_reclaim() 快速回收内存，如果仍然低于水线，就换到其他 zone。 */
+  unsigned int alloc_flags = ALLOC_WMARK_LOW;
+  get_page_from_freelist(, alloc_flags);
+  /* 如果失败了。则说明分配 order 后，会降到 low 阈值以下。就进入慢速路径*/
+  __alloc_pages_slowpath()
+    /* 使用 min 阈值 */
+    alloc_flags = gfp_to_alloc_flags(gfp_mask, order);
+      unsigned int alloc_flags = ALLOC_WMARK_MIN | ALLOC_CPUSET;
+    /* 如果 GFP flag 里有 __GFP_KSWAPD_RECLAIM */
+    if (alloc_flags & ALLOC_KSWAPD)
+      wake_all_kswapds(order, gfp_mask, ac);
+    /* 使用 min 阈值分配内存 */
+    get_page_from_freelist(gfp_mask, order, alloc_flags, ac);
+```
+
+## 相关 patch
+
+- 2016-07-21 [\[PATCH 0/8\] compaction-related cleanups v5 - Vlastimil Babka](https://lore.kernel.org/linux-mm/20160721073614.24395-1-vbabka@suse.cz/)
+  - mm, page_alloc: set alloc_flags only once in slowpath
+    - 在 slowpath 中只设置一次 slowpath，
+    - 新增 gfp_pfmemalloc_allowed() 函数，
+  - mm, page_alloc: don't retry initial attempt
+- 2023-01-13 [\[PATCH 0/6 v3\] Discard \_\_GFP_ATOMIC - Mel Gorman](https://lore.kernel.org/all/20230113111217.14134-1-mgorman@techsingularity.net/)
+  - mm: discard `__GFP_ATOMIC`
+    - 移除 `__GFP_ATOMIC`，因为它一直是和 `__GFP_HIGH` 一起使用，
