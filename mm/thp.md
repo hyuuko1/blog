@@ -331,10 +331,11 @@ __split_huge_pmd_locked()
   - shmem: add huge pages support
 - 2022-11-03 [\[PATCH 0/3\] mm,huge,rmap: unify and speed up compound mapcounts - Hugh Dickins](https://lore.kernel.org/linux-mm/5f52de70-975-e94f-f141-543765736181@google.com/)
   - 优化 compound mapcount
-  - 大页拆分支持文件页
   - mm,thp,rmap: simplify compound page mapcount handling
 - 2022-11-22 [\[PATCH v2 0/3\] mm,thp,rmap: rework the use of subpages_mapcount - Hugh Dickins](https://lore.kernel.org/linux-mm/a5849eca-22f1-3517-bf29-95d982242742@google.com/)
+  - 在 Linus 的指导下，很快又修改了。
 - 2024-04-09 [\[PATCH v1 00/18\] mm: mapcount for large folios + page_mapcount() cleanups - David Hildenbrand](https://lore.kernel.org/linux-mm/20240409192301.907377-1-david@redhat.com/)
+  - 目前的实现。
 - 2024-05-21 [Facing down mapcount madness \[LWN.net\]](https://lwn.net/Articles/974223/)
 - 2023-07-10 [\[PATCH v4 0/9\] Create large folios in iomap buffered write path - Matthew Wilcox (Oracle)](https://lore.kernel.org/linux-fsdevel/20230710130253.3484695-1-willy@infradead.org/)
 - 2024-04-15 [\[PATCH v3 0/4\] mm/filemap: optimize folio adding and splitting - Kairui Song](https://lore.kernel.org/all/20240415171857.19244-1-ryncsn@gmail.com/)

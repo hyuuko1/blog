@@ -6,30 +6,28 @@
    - [x] vmalloc, vmap
    - [x] percpu 分配器
    - [x] buddy system 物理页面分配器
-   - [ ] kmalloc：SLUB
+   - [x] kmalloc：SLUB
      - 还未 review kfree 的 code
    - [x] CMA
-     - [ ] dma-mapping
-     - [ ] dma pool
-2. [ ] 内存布局
+2. [x] 内存布局
 3. 进程地址空间
-   1. [ ] VMA
-   2. [ ] mmap
-   3. [ ] cow
+   1. [x] VMA
+   2. [x] mmap
+   3. [] cow
 4. 与文件系统相关的 page cache
    1. [ ] readahead
    2. [ ] writeback
 5. 大页提升性能
-   1. [ ] hugetlb
-   2. [ ] THP
+   1. [x] hugetlb
+   2. [x] THP
 6. 内存不足时用的
    1. [x] OOM
    2. [x] rmap
-   3. [ ] 内存回收 reclaim
-   4. [ ] 内存规整 compaction
-   5. [ ] 内存迁移 migrate
+   3. [x] 内存回收 reclaim
+   4. [x] 内存规整 compaction
+   5. [x] 内存迁移 migrate
    6. [ ] KSM
-   7. [ ] swap
+   7. [x] swap
    8. [ ] zram
    9. [ ] zswap
 7. [ ] 内存热插拔

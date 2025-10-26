@@ -1,0 +1,2 @@
+- [\[PATCH v9 00/17\] KVM: Mapping guest_memfd backed memory at the host for software protected VMs](https://lore.kernel.org/all/20250513163438.3942405-11-tabba@google.com/)
+- [\[RFC PATCH v2 00/51\] 1G page support for guest_memfd - Ackerley Tng](https://lore.kernel.org/linux-mm/cover.1747264138.git.ackerleytng@google.com/)

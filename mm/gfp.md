@@ -93,7 +93,7 @@ __alloc_pages_noprof->__alloc_pages_slowpath->__alloc_pages_direct_reclaim->
 `__GFP_MOVABLE` 有两个作用
 
 1. 和 `__GFP_HIGHMEM` 组合表示从可移动区域分配物理页。
-2. 在根据可移动性分组技术中表示申请迁移类型是可移动类型的物理页 `MIGRATE_MOVABLE`。
+2. 在根据可移动性分组技术中表示申请迁移类型是可移动类型的物理页 `MIGRATE_MOVABLE`（尽可能地从这里申请，可能会从其他类型的进行 steal）
 
 ## `__GFP_RECLAIMABLE`
 

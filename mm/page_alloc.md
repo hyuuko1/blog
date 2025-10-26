@@ -36,7 +36,7 @@ __alloc_frozen_pages_noprof()
             4. 如果实在不行，而且没有 ALLOC_NOFRAGMENT，允许碎片化，就 `__rmqueue_steal()`，fallback 到其他 migratetype 进行窃取，不会改变 pageblock 的 migratetype，但这样使得该 pageblock 内的页面。在 `__del_page_from_free_list()` 里会打印 WARN。
                1. 如果我们要分配 Unmovable 的，但是从 movable pageblock 里分配了，那么要是将来内存规整时把这页面移动了咋办？详见 https://g.co/gemini/share/247c3aa86588
                   1. 其实，如果我们不传入 `__GFP_MOVABLE` 标志，page alloc 时是不会给该 page 加上啥东西来防止页面将来被迁移的，如果我们要防止页面被迁移，那需要自己另作操作，比如 GUP。所以，页面能否迁移，和 pageblock 的 MIGRATE_MOVABLE 没任何关系。
-                  2. 那么，pageblock 的 MIGRATE_MOVABLE 的作用是什么呢？答：是为了让同一个 pageblock 内的页面的可移动性“尽可能地”相同，也就是在同一个 pageblock 内尽可能地申请具有相同可移动性的页面，也就是“根据可移动性分组”（这个“可移动性”取决于用户是否 gup，并不取决于 pageblock 的 migratetype），这样可以让内存规整时更为顺利。因此，可以说，`__rmqueue_steal()` 会污染 pageblock，可能会使得内存规整遍历到这个 MIGRATE_MOVABLE 的 pageblock 时遇到无法迁移的页面（如果被用户 gup 了），可能造成碎片化。
+                  2. 那么，pageblock 的 MIGRATE_MOVABLE 的作用是什么呢？答：是为了让同一个 pageblock 内的页面的可移动性“尽可能地”相同，也就是**在同一个 pageblock 内尽可能地申请具有相同可移动性的页面**，也就是“根据可移动性分组”（这个“可移动性”取决于用户是否 gup，并不取决于 pageblock 的 migratetype），这样可以让内存规整时更为顺利。因此，可以说，`__rmqueue_steal()` 会污染 pageblock，可能会使得内存规整遍历到这个 MIGRATE_MOVABLE 的 pageblock 时遇到无法迁移的页面（如果被用户 gup 了），可能造成碎片化。
          3. 如果分配失败，但是 ALLOC_OOM ALLOC_NON_BLOCK，那么就偷用 `MIGRATE_HIGHATOMIC` 来分配，因为相比于将来 high-order atomic 失败，此时在这里分配失败要更糟糕。
 
 ---
