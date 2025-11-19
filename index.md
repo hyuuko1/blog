@@ -23,6 +23,9 @@ features:
   - title: 内存管理
     link: /mm
     details: e820, memblock, slub, buddy system, hugepage, THP
+  - title: 进程调度
+    link: /sched
+    details: cfs, eevdf, sched_ext
   - title: 网络
     link: /
     details: kernel TCP/IP stack, DPDK, RDMA, XDP

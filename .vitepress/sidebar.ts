@@ -11,6 +11,11 @@ export function nav(): DefaultTheme.NavItem[] {
       activeMatch: "/process/",
     },
     {
+      text: "调度",
+      link: "/sched/index",
+      activeMatch: "/sched/",
+    },
+    {
       text: "中断",
       link: "/irq/index",
       activeMatch: "/irq/",
@@ -64,6 +69,10 @@ export function sidebar(): DefaultTheme.Sidebar {
     "/process/": {
       base: "/process/",
       items: sidebarProcess(),
+    },
+    "/sched/": {
+      base: "/sched/",
+      items: sidebarSched(),
     },
     "/irq/": {
       base: "/irq/",
@@ -285,6 +294,20 @@ function sidebarProcess(): DefaultTheme.SidebarItem[] {
       items: [
         { text: "CFS", link: "CFS" },
         { text: "EEVDF", link: "EEVDF" },
+      ],
+    },
+  ];
+}
+
+function sidebarSched(): DefaultTheme.SidebarItem[] {
+  return [
+    {
+      text: "调度",
+      collapsed: false,
+      items: [
+        { text: "CFS", link: "cfs" },
+        { text: "EEVDF", link: "eevdf" },
+        { text: "sched_ext", link: "sched_ext" },
       ],
     },
   ];
