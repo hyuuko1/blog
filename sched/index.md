@@ -1,3 +1,5 @@
+# 任务调度
+
 - [任务调度器：从入门到放弃 - OPPO 内核工匠](https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzAxMDM0NjExNA==&action=getalbum&album_id=4008276724713586688)
 
 | 调度类                      | 调度策略       | 调度算法 | 调度对象 |
@@ -9,7 +11,7 @@
 | 公平调度类 fair_sched_class | SCHED_NORMAL   |          |          |
 |                             | SCHED_BATCH    |          |          |
 |                             | SCHED_IDLE     |          |          |
-| ext 调度类 ext_sched_class  | SCHED_EXT      |          |          |
+| scx 调度类 ext_sched_class  | SCHED_EXT      |          |          |
 | 空闲调度类 idle_sched_class | 无             |          |          |
 
 - 进程优先级
@@ -95,13 +97,15 @@ struct sched_entity {
     - schedule()
     - cond_resched()
     - might_resched()
-  - 周期性调度。时钟 tick
-  - 抢占。某个进程被唤醒后，给当前进程设置 `TIF_NEED_RESCHED`，并且可能发 IPI 啥的。
+  - 周期调度。时钟 tick
+    - 限期调度类的周期调度
+    - 实时调度类的周期调度
+    - 公平调度类的周期调度
+  - 唤醒进程时，被唤醒的进程可能抢占当前进程
     - 当前进程退出中断时，发生调度 irqentry_exit_cond_resched()->raw_irqentry_exit_cond_resched()->preempt_schedule_irq()
       - 这个中断可能是 smp_send_reschedule() 发送的 IPI 中断，
     - 唤醒指定进程
       - wake_up_process() 只会改 state 并放进 rq ？
-      - wake_up_new_task() 创建新进程时。很有可能会让出当前 cpu？
     - 唤醒 wait_queue 队列里的
       - 一般最后会调用到 default_wake_function()->try_to_wake_up()
       - 有以下函数：
@@ -110,13 +114,28 @@ struct sched_entity {
       - ...
     - 可能会选择正在某个 cpu 上运行着的一个受害者，让被唤醒的进程会抢占那个进程？
       - 但还是得让那个进程调用到 `__schedule()` 才行？
+  - 创建新进程时，新进程抢占当前进程
+    - wake_up_new_task() 创建新进程时。很有可能会让出当前 cpu？
+  - 内核抢占
+    - 内核抢占是指当进程在内核模式下运行的时候可以被其他进程抢占。有以下抢占点：
+    - preempt_enable() 开启抢占时
+      - spin_unlock() 释放自旋锁时
+    - local_bh_enable() 开启软中断时
+    - irqentry_exit()->irqentry_exit_cond_resched() 中断处理程序返回内核模式时，
+      - 这个中断可能是别的进程 smp_send_reschedule() 发送的 IPI，也可能是时钟中断或外设中断？
+  - 用户抢占
+    - 在用户态运行时被抢占。
+    - irqentry_exit()->irqentry_exit_to_user_mode()
+  - 高精度时钟。
+- 抢占点
+  - 抢占。某个进程被唤醒后，给当前进程设置 `TIF_NEED_RESCHED`，并且可能发 IPI 啥的。
 - 各种 CONFIG
   - 调度抢占相关
     - CONFIG_PREEMPT_NONE: No Forced Preemption (Server)
       - 可以 `cond_resched()` 自愿让出，别人没法抢。
     - CONFIG_PREEMPT_VOLUNTARY: Voluntary Kernel Preemption (Desktop)
-      - 可以 `cond_resched()/might_resched()` 自愿让出，别人没法抢。
-        - might_resched() 和 cond_resched() 一样，都是直接调用的 `__cond_resched()`，might_resched() 存在的目的就是在 CONFIG_PREEMPT_NONE 时作为一个空函数。
+      - 可以 `cond_resched()` 自愿让出，别人没法抢。
+      - `might_sleep()` 在此 CONFIG 下，包含了 `cond_resched()` 的作用。
     - CONFIG_PREEMPT: Preemptible Kernel (Low-Latency Desktop)
     - CONFIG_PREEMPT_LAZY: Scheduler controlled preemption model
       - https://lore.kernel.org/all/20241007075055.331243614@infradead.org/
@@ -127,8 +146,36 @@ struct sched_entity {
   - 其他
     - CONFIG_SCHED_CORE
     - CONFIG_SCHED_CLASS_EXT
-- 何时应调用 cond_resched() ？
-  - 一般是在 while 循环里的某个操作可能会耗时很久一直占用 cpu 时，如果不 cond_resched()，就会一直占着 cpu
+- 带宽管理
+  - 限期调度类的带宽管理
+  - 实时调度类的带宽管理
+  - 公平调度类的带宽管理
+    - cpu cgroup
+- 进程的处理器亲和性
+  - 系统调用 sched_setaffinity() 和 sched_getaffinity()
+  - 内核线程 kthread_bind() 和 set_cpus_allowed_ptr()
+  - cpuset cgroup
+- 处理器负载均衡
+  - 限期调度类的处理器负载均衡
+  - 实时调度类的处理器负载均衡
+  - 公平调度类的处理器负载均衡
+    - 调度域和调度组
+    - 负载均衡算法
+- 迁移线程
+- 隔离处理器
+  - isolcpus=
+- 进程的安全上下文
+  - cred
+
+在开启 CONFIG_DEBUG_ATOMIC_SLEEP 时，might_sleep() 比 might_resched() 多了一些检测，在未开启时，这两个并无区别。因此，使用 might_sleep() 而非 might_resched()，后者只是一个内部接口。
+
+那 might_sleep() 和 cond_resched() 是什么区别呢？
+
+- 在开启 CONFIG_DEBUG_ATOMIC_SLEEP 时，前者比后者多了一个 WARN，有助于尽早发现问题。
+- 在 CONFIG_PREEMPT_NONE 时，前者不生效，后者生效，其他 CONFIG 时，二者行为一致。
+- 前者用于提示：后面的操作可能发生调度。本身也有自愿调度的作用，但并不是其主要用途。
+  - [ ] 我觉得不应该让 might_sleep() 有主动调度的作用啊，应该只保留 debug 提示的作用，因为后面可能就马上要发生调度了。而且如果此时调度，那么可能就导致可能会立即成功的 wait_event() 之类的更晚执行了，导致延迟变高？
+- 后者一般在很耗时且不会调度出去的 while 循环中使用，增加自愿调度点，防止非抢占式内核里一直占着 cpu，造成软死锁。
 
 ---
 
@@ -137,3 +184,40 @@ struct sched_entity {
 - wakeup_preempt()
 - resched_curr() 和 resched_curr_lazy()
 - pick_next_task()
+
+---
+
+中断处理程序返回用户模式或者内核模式时，可能发生调度。
+
+```cpp
+irqentry_exit()
+  if (user_mode(regs))
+    irqentry_exit_to_user_mode()->exit_to_user_mode_prepare()
+      if (unlikely(ti_work & EXIT_TO_USER_MODE_WORK))
+        exit_to_user_mode_loop()
+          if (ti_work & (_TIF_NEED_RESCHED | _TIF_NEED_RESCHED_LAZY))
+            schedule(); /* 调度 */
+  else if (!regs_irqs_disabled(regs))
+    if (IS_ENABLED(CONFIG_PREEMPTION)) irqentry_exit_cond_resched();
+      raw_irqentry_exit_cond_resched()
+        if (!preempt_count())
+          if (need_resched())
+            preempt_schedule_irq();
+              __schedule(SM_PREEMPT); /* 调度 */
+```
+
+调度
+
+```cpp
+__schedule(int sched_mode)
+  next = pick_next_task(rq, rq->donor, &rf);
+  clear_tsk_need_resched(prev); /* 清除 _TIF_NEED_RESCHED | _TIF_NEED_RESCHED_LAZY */
+  clear_preempt_need_resched(); /* 清楚 preempt_count 里的 PREEMPT_NEED_RESCHED */
+  context_switch(rq, prev, next, &rf);
+```
+
+---
+
+疑问
+
+- [ ] cfs 和 eevdf 都是 fair_sched_class 的实现？cfs 已被 eevdf 取代，现在的代码里只有 eevdf 没有 cfs？
