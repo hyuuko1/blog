@@ -11,7 +11,7 @@ html {
   /* font-size: 22px; */
 }
 .vp-doc h3 {
-  font-size: 1.4em;
+  font-size: 1.2em;
 }
 .vp-doc h4 {
   font-size: 1.1em;
@@ -26,6 +26,13 @@ html {
 .vp-doc p {
   /* line-height: 24px; */
   line-height: 1.5em;
+}
+
+/* 有序列表的标号 */
+ol ::marker {
+  font-family: monospace;
+  font-size: 1.1em;
+  font-weight: bold;
 }
 
 :root {

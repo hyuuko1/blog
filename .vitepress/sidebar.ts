@@ -303,6 +303,7 @@ function sidebarSched(): DefaultTheme.SidebarItem[] {
   return [
     {
       text: "调度",
+      link: "index",
       collapsed: false,
       items: [
         { text: "CFS", link: "cfs" },
