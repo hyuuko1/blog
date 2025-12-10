@@ -1,0 +1,68 @@
+{
+  // https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "DebugKernel",
+      "type": "cppdbg",
+      "request": "launch",
+      "preLaunchTask": "task: run_qemu",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/out/x86_64/vmlinux",
+      "stopAtEntry": true,
+      "externalConsole": false,
+      "internalConsoleOptions": "neverOpen",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "miDebuggerServerAddress": "localhost:1234",
+      // https://www.ece.villanova.edu/VECR/doc/gdb/Mode-Options.html
+      // -n 不执行任何 .gdbinit ？
+      "miDebuggerArgs": "-q",
+      // https://sourceware.org/gdb/current/onlinedocs/gdb.html/GDB_002fMI.html
+      "logging": {
+        // "engineLogging": true
+      },
+      "setupCommands": [
+        {
+          "description": "为 gdb 启用整齐打印",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": false
+        },
+        {
+          "description": "将反汇编风格设置为 Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": false
+        },
+        {
+          "description": "Enable autoloading of Linux GDB scripts",
+          "text": "add-auto-load-safe-path ${workspaceFolder}/scripts/gdb",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Format Locals as HEX by default",
+          "text": "set output-radix 16",
+          "ignoreFailures": true
+        },
+        /* 有些版本的 vmlinux 里的 debuginfo 里的 source mapping 可能有些问题？
+           源文件地址变成了 out/x86_64/init/main.c 这里要做一下替换 */
+        // {
+        //   "description": "设置地址替换",
+        //   "text": "set substitute-path out/x86_64 ${workspaceFolder}",
+        //   "ignoreFailures": true
+        // }
+      ],
+      "postRemoteConnectCommands": [
+        {
+          "description": "Hardware breakpoint at start",
+          // "text": "-break-insert -t -h -f start_kernel",
+          "text": "-break-insert -h -f start_kernel",
+          "ignoreFailures": false
+        }
+      ],
+      // 关于硬件断点，见 https://sourceware.org/gdb/current/onlinedocs/gdb.html/Set-Breaks.html
+      "hardwareBreakpoints": {
+        "require": false
+      }
+    }
+  ]
+}

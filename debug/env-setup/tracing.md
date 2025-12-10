@@ -1,0 +1,9 @@
+- [Linux tracing/profiling 基础：符号表、调用栈、perf/bpftrace 示例等（2022）](http://arthurchiao.art/blog/linux-tracing-basis-zh/)
+- [Practical Linux tracing ( Part 1/5) : symbols, debug symbols and stack unwinding | by Tungdam | Coccoc Engineering Blog | Medium](https://medium.com/coccoc-engineering-blog/things-you-should-know-to-begin-playing-with-linux-tracing-tools-part-i-x-225aae1aaf13)
+- [【原创】Kernel 调试追踪技术之 Ftrace on ARM64 - HPYU - 博客园](https://www.cnblogs.com/hpyu/p/14348523.html)
+  - Ftrace 的一些关键实现方式、动态替换技术
+  - Ftrace 对性能的影响
+- [4.1 Linux 内核调试 - CTF-All-In-One](https://firmianay.gitbook.io/ctf-all-in-one/4_tips/4.1_linux_kernel_debug)
+- [搭建 Linux 内核网络调试环境（vscode + gdb + qemu） - 知乎](https://zhuanlan.zhihu.com/p/445453676)
+  - [视频](https://www.zhihu.com/zvideo/1454501191648104449)
+- [IPADS 新人培训第七讲：内核调试\_哔哩哔哩\_bilibili](https://www.bilibili.com/video/BV1Aa41167Nn/)

@@ -50,6 +50,8 @@
 
 12. [品读 Linux 0.11 核心代码](https://github.com/dibingfa/flash-linux0.11-talk)
 
+《深入 Linux 内核架构》，内核版本 2.6.24。
+
 ## 一些我觉得质量很好的博客
 
 - [RedHat 的案例库](https://access.redhat.com/search/?q=Troubleshoot&documentKind=Article%26amp;Solution&p=1&rows=10)
@@ -58,5 +60,10 @@
   - [聊聊 Linux 内核 - 微信公众号](https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzg2MzU3Mjc3Ng==&action=getalbum&album_id=2559805446807928833)
     内存管理，也有网络 IO 相关的。内核版本 v5.4
   - [聊聊 Linux 内核 - 知乎专栏](https://www.zhihu.com/column/c_1550511492654600192)
+- [Linux 内核 - 泰晓科技](https://tinylab.org/categories/#linux-%E5%86%85%E6%A0%B8-ref)
 
-## 多问 DeepSeek
+## 多问 LLM
+
+##
+
+[4. Linux 主线内核跟踪 — MySummary 1 文档](https://mysummary.readthedocs.io/zh/latest/Linux%E4%B8%BB%E7%BA%BF%E5%86%85%E6%A0%B8%E8%B7%9F%E8%B8%AA/README.html)

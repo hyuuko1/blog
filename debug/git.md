@@ -1,5 +1,7 @@
 # Git 常见用法
 
+- [Pro Git 中文版（第二版）](https://www.progit.cn/)
+
 ## ~/.gitconfig
 
 ```conf

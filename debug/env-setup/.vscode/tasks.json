@@ -1,0 +1,46 @@
+{
+  "version": "2.0.0",
+  "type": "shell",
+  "command": "/data/blog/src/scripts/run-qemu.sh",
+  "presentation": {
+    "echo": false
+  },
+  "problemMatcher": [],
+  //  会继承上一层的
+  "tasks": [
+    {
+      "label": "task: run_qemu",
+      "args": [
+        // "-myqemu",
+        // "-initrd",
+        // "-nodev",
+        "-dk",
+        // "-b",
+        // "cma=1G@6G-8G",
+      ],
+      "presentation": {
+        "focus": true
+      },
+      "isBackground": true,
+      // For this task to be a background task of a launch.json debugger setup,
+      // a non-empty problem matcher must be defined. This is just a dummy one.
+      "problemMatcher": [
+        {
+          "pattern": [
+            {
+              "regexp": ".",
+              "file": 1,
+              "location": 2,
+              "message": 3
+            }
+          ],
+          "background": {
+            "activeOnStart": true,
+            "beginsPattern": ".",
+            "endsPattern": "."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,16 +1,6 @@
 # 任务调度
 
-- [任务调度器：从入门到放弃 - OPPO 内核工匠](https://mp.weixin.qq.com/mp/appmsgalbum?__biz=MzAxMDM0NjExNA==&action=getalbum&album_id=4008276724713586688)
-- [Yanfei Xu - 知乎](https://www.zhihu.com/people/yann-linux/posts)
-  - [Linux 进程调度：调度时机 - 知乎](https://zhuanlan.zhihu.com/p/163728119)
-  - [Linux 组调度原理 - 知乎](https://zhuanlan.zhihu.com/p/400102565)
-  - [Linux 进程调度：主调度器 - 知乎](https://zhuanlan.zhihu.com/p/426395078)
-    - `__schedule()`
-    - pick_next_task()
-    - context_switch()
-  - [Linux 进程调度：周期性调度器 - 知乎](https://zhuanlan.zhihu.com/p/426448579)
-    - scheduler_tick()
-  - [Linux 内核：EEVDF 调度器详解 - 知乎](https://zhuanlan.zhihu.com/p/704413081)
+推荐阅读：[](../好文章/调度.md)
 
 | 调度类                      | 调度策略       | 调度算法 | 调度对象 |
 | --------------------------- | -------------- | -------- | -------- |
@@ -177,7 +167,64 @@ struct sched_entity {
 - 进程的安全上下文
   - cred
 
+## 自愿与非自愿调度
+
+- [Linux 调度 - 切换类型的划分 - 兰新宇](https://zhuanlan.zhihu.com/p/402423877)
+
+判断是自愿还是非自愿的流程；
+
+1. 如果是 SM_IDLE，那就是自愿。
+2. 如果是 SM_PREEMPT 或者 TASK_RUNNING，那就是非自愿。
+3. 其余都是自愿。
+
+```cpp
+struct task_struct {
+	/* Context switch counts: */
+	unsigned long			nvcsw;  /* Number of Voluntary Context SWitches */
+	unsigned long			nivcsw; /* Number of InVoluntary Context SWitches */
+};
+```
+
+```bash
+❯ gcc -x c - <<EOF
+#include <sched.h>
+#include <unistd.h>
+int main() {
+	while (1) { sched_yield(); }	// 非自愿切换
+	// while (1) { sleep(1); }	// 自愿切换
+}
+EOF
+
+❯ ./a.out &
+❯ pidstat -w 1 -p `pidof a.out`
+# 注意不要与 task_struct 中的变量名混淆
+# cswch:   Voluntary Context SWitCHes
+# nvcswch: Non-Voluntary Context SWitCHes
+#                              自愿    非自愿
+20:27:40      UID       PID   cswch/s nvcswch/s  Command
+20:27:41     1000     19364      0.00     64.00  a.out
+20:27:42     1000     19364      0.00    129.00  a.out
+20:27:43     1000     19364      0.00     59.00  a.out
+
+❯ grep switch /proc/`pidof a.out`/sched
+nr_switches                                  :                 3174
+nr_voluntary_switches                        :                    0
+nr_involuntary_switches                      :                 3174
+
+❯ crash /path/to/vmlinux /proc/kcore
+crash> task 1
+PID: 1        TASK: ffff888180078000  CPU: 1    COMMAND: "systemd"
+crash> task_struct.nvcsw -o ffff888180078000
+struct task_struct {
+  [ffff888180078c18] unsigned long nvcsw;
+}
+# 使用 systemtap 的 watchpoint 功能，当这个计数被修改时，打印出 back trace
+❯ stap -v -e 'probe kernel.data(0xffff888180078c18).write { print_backtrace(); }'
+```
+
 ## 调度时机
+
+- [Linux 中执行调度的时机 - 知乎](https://zhuanlan.zhihu.com/p/402340888)
 
 先做个总结：
 
@@ -206,7 +253,7 @@ struct sched_entity {
 ### 主动调度：`cond_resched()` 等函数
 
 - `schedule()` 主动调度
-- `cond_resched()` 满足条件时自愿调度
+- `cond_resched()` 满足条件时自愿调度（其实并未统计为 ）
 - `might_sleep()` 主要用于 debug，但是当 `CONFIG_PREEMPT_VOLUNTARY=y` 时，隐含了 `cond_resched()` 的效果
 
 ### 内核态抢占：`preempt_enable()` 等函数
@@ -282,6 +329,27 @@ syscall_exit_to_user_mode()
 
 中断和异常处理详见 [irq/index.md](/irq/index.md)
 
+## 调度标记的时机
+
+- [Linux 中执行调度的时机 - 知乎](https://zhuanlan.zhihu.com/p/402340888)
+
+```cpp
+__resched_curr()
+
+/* 给 rq->idle 设置 */
+wake_up_idle_cpu()
+  set_nr_and_not_polling(task_thread_info(rq->idle), TIF_NEED_RESCHED)
+
+/* idle_inject_timer_fn() 以及 tree rcu 会调用这个设置 TIF_NEED_RESCHED */
+set_tsk_need_resched()
+```
+
+```bash
+sudo bpftrace -e 'fentry:vmlinux:__resched_curr { @[kstack] = count(); }'
+```
+
+结果放在 [](./resched_curr.md) 了，
+
 ## TIF_NEED_RESCHED
 
 用于标记线程需要被重新调度。
@@ -330,18 +398,41 @@ syscall_exit_to_user_mode()
 - resched_curr() 和 resched_curr_lazy()
 - pick_next_task()
 
-## `__schedule()`
+## 周期性调度
+
+```cpp
+update_process_times()->sched_tick()
+
+fentry:vmlinux:sched_tick
+```
+
+在 [](./resched_curr.md) 中有调用栈。
+
+## 组调度
+
+- [ ] 暂时忽略组调度。目前遇到涉及到组调度的地方有：
+  - pick_next_task_fair()
+
+注意组调度与调度组（负载均衡中的概念）的区别。
+
+## 负载均衡
+
+- [Linux 调度负载均衡之 sched_domain - 知乎](https://zhuanlan.zhihu.com/p/702021310)
+
+## 关键函数代码流程
+
+### `__schedule()`
 
 `__schedule()` 函数的注释，翻译一下：
 
 驱使调度器运行并因此进入本函数的主要途径如下：
 
-1. 显式阻塞（Explicit blocking）：
+1. **显式阻塞**（Explicit blocking）：
    例如互斥锁（mutex）、信号量（semaphore）、等待队列（waitqueue）等机制。
-2. 在中断返回和用户空间返回路径上检查 TIF_NEED_RESCHED 标志：
+2. **在中断返回和用户空间返回路径上**检查 TIF_NEED_RESCHED 标志：
    例如调度器会在定时器中断处理函数 sched_tick() 中设置该标志。
 3. 唤醒（Wakeups）本身并不会直接导致进入 schedule()，它们只是将一个任务添加到 run-queue 中，仅此而已。
-   不过，如果新加入运行队列的任务抢占了当前任务（例如优先级更高），那么唤醒操作会设置 TIF_NEED_RESCHED 标志，并且 schedule() 会在最近的可能时机被调用：
+   不过，如果**新加入运行队列的任务抢占了当前任务**（例如优先级更高），那么唤醒操作会设置 TIF_NEED_RESCHED 标志，并且 schedule() 会在最近的可能时机被调用：
    - 如果内核是可抢占的（CONFIG_PREEMPTION=y）：
      - 在系统调用或异常上下文中，发生在下一次最外层的 preempt_enable() 调用时。（这甚至可能快到就在 wake_up() 内部释放自旋锁 spin_unlock() 的那一刻！）
      - 在中断（IRQ）上下文中，发生在从中断处理函数返回到可抢占上下文（内核态）的时候。
@@ -386,6 +477,227 @@ __schedule(int sched_mode)
       raw_cpu_write(current_task, next_p); /* 修改 percpu 的 current() */
 ```
 
+```cpp
+pick_next_task()
+  __pick_next_task()
+
+__pick_next_task()
+  p = pick_next_task_fair(rq, prev, rf);
+    p = pick_task_fair(rq);
+  return p;
+```
+
+```cpp
+switch_to()
+```
+
+---
+
+### 唤醒线程 `try_to_wake_up()`
+
+- [ ] 暂不关注内存屏障等同步原语，先看主要逻辑。
+  - 一个 task_struct 可能同时在 schedule() 和被 try_to_wake_up()
+- [ ] 可以在 softirq/hardirq context 使用吗？
+
+schedule() 是 dequeue task，
+try_to_wake_up() 是 enqueue task？
+
+此函数对 schedule()函数（该函数会从队列中取出任务）具有原子性。在访问@p->state 之前，它会发出一个完整的内存屏障，请参阅 set_current_state()函数的注释。
+
+If the task was not queued/runnable, also place it back on a runqueue.
+
+1. `guard(preempt)();` 在当前作用域禁止内核抢占：在此处 `preempt_disable()` 禁止抢占，离开作用域时 `preempt_enable()` 开启抢占。
+   ```cpp
+   /* include/linux/preempt.h 定义了这个 scope-based cleanup helper */
+   DEFINE_LOCK_GUARD_0(preempt, preempt_disable(), preempt_enable())
+   ```
+2. 场景: 进程自己调用唤醒自己（虽然少见，但在某些同步原语中可能发生）。
+   - 因为是 current，进程肯定在 CPU 上运行，也肯定在运行队列（on_rq）上。不需要复杂的锁，直接检查状态是否匹配 (ttwu_state_match)，如果匹配，直接调用 ttwu_do_wakeup(p) 将状态改为 TASK_RUNNING。
+   - 优化: 避免了获取 pi_lock 和 rq->lock 的开销。
+3. waker 的 `wake_up_state()` 和 wakee 的 `set_current_state()` 里面都用到了 full memory barrier（位于以下伪码的 1 2 之间以及 A B 之间）。
+   ```cpp
+                        wakee					|		waker
+        current->state = TASK_UNINTERRUPTIBLE; /* (1) STORE */	| CONDITION = 1;			/* (A) STORE */
+        if (CONDITION)			/* (2) LOAD */		| if (p->state & TASK_UNINTERRUPTIBLE)	/* (B) LOAD */
+                break;						| 	... 唤醒 wakee ...		/* (C) */
+        schedule();			/* (3) */		|
+   ```
+   如果 1 2 之间以及 A B 之间没乱序，那么不论是 wakee 先执行完，还是 waker 先执行完，wakee 最后都不应睡眠。
+   但是如果乱序了，顺序可能就是 2 -> B -> A -> 1 -> 3，导致：
+   1. 因为 2 在 A 之前执行，所以 3 被执行了，wakee 睡眠。
+   2. 因为 B 在 1 之前执行，所以 C 并没有被执行，wakee 未被唤醒。
+
+```cpp
+int try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
+{
+	/* 1 */
+	guard(preempt)();
+	int cpu, success = 0;
+
+	wake_flags |= WF_TTWU;
+
+	/* 2 */
+	if (p == current) {
+		WARN_ON_ONCE(p->se.sched_delayed);	/* TODO */
+		if (!ttwu_state_match(p, state, &success))
+			goto out;
+
+		trace_sched_waking(p);
+		ttwu_do_wakeup(p);
+		goto out;
+	}
+
+	/* 获取 p->pi_lock，这是为了防止多个 cpu 唤醒同一个 task ？ */
+	scoped_guard (raw_spinlock_irqsave, &p->pi_lock) {
+		/* 3 */
+		smp_mb__after_spinlock();
+		if (!ttwu_state_match(p, state, &success))
+			break;
+
+		trace_sched_waking(p);
+
+		/*
+		 * Ensure we load p->on_rq _after_ p->state, otherwise it would
+		 * be possible to, falsely, observe p->on_rq == 0 and get stuck
+		 * in smp_cond_load_acquire() below.
+		 *
+		 * sched_ttwu_pending()			try_to_wake_up()
+		 *   STORE p->on_rq = 1			  LOAD p->state
+		 *   UNLOCK rq->lock
+		 *
+		 * __schedule() (switch to task 'p')
+		 *   LOCK rq->lock			  smp_rmb();
+		 *   smp_mb__after_spinlock();
+		 *   UNLOCK rq->lock
+		 *
+		 * [task p]
+		 *   STORE p->state = UNINTERRUPTIBLE	  LOAD p->on_rq
+		 *
+		 * Pairs with the LOCK+smp_mb__after_spinlock() on rq->lock in
+		 * __schedule().  See the comment for smp_mb__after_spinlock().
+		 *
+		 * A similar smp_rmb() lives in __task_needs_rq_lock().
+		 */
+		smp_rmb();
+		if (READ_ONCE(p->on_rq) && ttwu_runnable(p, wake_flags))
+			break;
+
+		/*
+		 * Ensure we load p->on_cpu _after_ p->on_rq, otherwise it would be
+		 * possible to, falsely, observe p->on_cpu == 0.
+		 *
+		 * One must be running (->on_cpu == 1) in order to remove oneself
+		 * from the runqueue.
+		 *
+		 * __schedule() (switch to task 'p')	try_to_wake_up()
+		 *   STORE p->on_cpu = 1		  LOAD p->on_rq
+		 *   UNLOCK rq->lock
+		 *
+		 * __schedule() (put 'p' to sleep)
+		 *   LOCK rq->lock			  smp_rmb();
+		 *   smp_mb__after_spinlock();
+		 *   STORE p->on_rq = 0			  LOAD p->on_cpu
+		 *
+		 * Pairs with the LOCK+smp_mb__after_spinlock() on rq->lock in
+		 * __schedule().  See the comment for smp_mb__after_spinlock().
+		 *
+		 * Form a control-dep-acquire with p->on_rq == 0 above, to ensure
+		 * schedule()'s deactivate_task() has 'happened' and p will no longer
+		 * care about it's own p->state. See the comment in __schedule().
+		 */
+		smp_acquire__after_ctrl_dep();
+
+		/*
+		 * We're doing the wakeup (@success == 1), they did a dequeue (p->on_rq
+		 * == 0), which means we need to do an enqueue, change p->state to
+		 * TASK_WAKING such that we can unlock p->pi_lock before doing the
+		 * enqueue, such as ttwu_queue_wakelist().
+		 */
+		WRITE_ONCE(p->__state, TASK_WAKING);
+
+		/*
+		 * If the owning (remote) CPU is still in the middle of schedule() with
+		 * this task as prev, considering queueing p on the remote CPUs wake_list
+		 * which potentially sends an IPI instead of spinning on p->on_cpu to
+		 * let the waker make forward progress. This is safe because IRQs are
+		 * disabled and the IPI will deliver after on_cpu is cleared.
+		 *
+		 * Ensure we load task_cpu(p) after p->on_cpu:
+		 *
+		 * set_task_cpu(p, cpu);
+		 *   STORE p->cpu = @cpu
+		 * __schedule() (switch to task 'p')
+		 *   LOCK rq->lock
+		 *   smp_mb__after_spin_lock()		smp_cond_load_acquire(&p->on_cpu)
+		 *   STORE p->on_cpu = 1		LOAD p->cpu
+		 *
+		 * to ensure we observe the correct CPU on which the task is currently
+		 * scheduling.
+		 */
+		if (smp_load_acquire(&p->on_cpu) &&
+		    ttwu_queue_wakelist(p, task_cpu(p), wake_flags))
+			break;
+
+		/*
+		 * If the owning (remote) CPU is still in the middle of schedule() with
+		 * this task as prev, wait until it's done referencing the task.
+		 *
+		 * Pairs with the smp_store_release() in finish_task().
+		 *
+		 * This ensures that tasks getting woken will be fully ordered against
+		 * their previous state and preserve Program Order.
+		 */
+		smp_cond_load_acquire(&p->on_cpu, !VAL);
+
+		cpu = select_task_rq(p, p->wake_cpu, &wake_flags);
+		if (task_cpu(p) != cpu) {
+			if (p->in_iowait) {
+				delayacct_blkio_end(p);
+				atomic_dec(&task_rq(p)->nr_iowait);
+			}
+
+			wake_flags |= WF_MIGRATED;
+			psi_ttwu_dequeue(p);
+			set_task_cpu(p, cpu);
+		}
+
+		ttwu_queue(p, cpu, wake_flags);
+	}
+out:
+	if (success)
+		ttwu_stat(p, task_cpu(p), wake_flags);
+
+	return success;
+}
+```
+
+## 其他
+
+**立即要做的事**
+
+- 看一些主要的流程的代码
+  - [ ] `__schedule()`
+    - [ ] eevdf 如何挑选下一个 task
+    - [ ] 如何切换上下文
+  - [ ] 如何唤醒指定进程
+    - [ ] 何时设置 TIF_NEED_RESCHED
+    - [ ] `__resched_curr()` 的调用路径
+  - [ ] 时钟 tick
+  - [ ] 组调度，带宽控制，分析数据结构联系
+  - [ ] 负载均衡
+  - [ ] idle
+
+---
+
+不着急做的事
+
+- [ ] CONFIG_SCHED_PROXY_EXEC 代理执行，和 RT 以及 SCHED_EXT 不能共存。
+- [ ] 看《趣谈 Linux 操作系统》
+- [x] ttwu 是什么意思
+  - Try To Wake Up
+- [ ] kernel/sched/debug.c
+- [ ] nohz 的情况下的时钟与调度
+
 ---
 
 疑问
@@ -394,7 +706,8 @@ __schedule(int sched_mode)
 
 ---
 
-TODO
+一些术语
 
-- [ ] CONFIG_SCHED_PROXY_EXEC 代理执行，和 RT 以及 SCHED_EXT 不能共存。
-- [ ] 《趣谈 Linux 操作系统》
+- waker 和 wakee
+  - waker 是唤醒者 task
+  - wakee 是被唤醒的 task

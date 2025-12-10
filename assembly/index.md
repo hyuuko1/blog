@@ -1,0 +1,3 @@
+- [x86 汇编语法基础（gnu 格式） - 知乎](https://zhuanlan.zhihu.com/p/602680768)
+- [使用 GNU 汇编语法编写 Hello World 程序的三种方法 - 知乎](https://zhuanlan.zhihu.com/p/604967765)
+- [Linux Kernel 源码学习必备知识之：GCC 内联汇编（AT&amp;T 格式） - 知乎](https://zhuanlan.zhihu.com/p/606376595)

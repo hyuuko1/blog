@@ -5,6 +5,7 @@
 - [【调试】crash 使用方法](https://www.cnblogs.com/dongxb/p/17364995.html)
 - [crash-utility.github.io/help.html](https://crash-utility.github.io/help.html)
 - [crash-utility.github.io/crash_whitepaper.html](https://crash-utility.github.io/crash_whitepaper.html)
+- 🌟[yifengyou/crash: 内核 crash 分析](https://github.com/yifengyou/crash)
 
 ## 查看线程组内的所有线程
 

@@ -45,7 +45,7 @@ QEMU=qemu-system-x86_64
 CPUS=4
 MEM_SIZE=8G
 KERNEL=/data/os-code/linux/out/x86_64/vmlinux
-# KERNEL=/data/os-code/linux/out/x86_64/arch/x86/boot/bzImage
+KERNEL=/data/os-code/linux/out/x86_64/arch/x86/boot/bzImage
 # KERNEL=/data/VMs/fedora_rootfs/boot/vmlinuz-6.8.5-301.fc40.x86_64
 
 INITRD=/data/VMs/alpine-minirootfs.img
@@ -78,11 +78,12 @@ VIRTIO_MODERN_OPTS="disable-legacy=on,disable-modern=off"
 # HUGETLBFS=/dev/shm
 HUGETLBFS=/dev/hugepages
 # HUGETLBFS=/dev/hugepages-1GB
-NR_2MB_PAGES=8192
+NR_2MB_PAGES=4096
+# NR_2MB_PAGES=2048
 NR_1GB_PAGES=0
 function prepare_hugepages() {
     nr_pages=$(</sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages)
-    if [ $nr_pages -eq 0 ]; then
+    if [ $nr_pages -ne $NR_2MB_PAGES ]; then
         sudo chmod 777 /dev/hugepages/
         echo $NR_2MB_PAGES | sudo tee /sys/kernel/mm/hugepages/hugepages-2048kB/nr_hugepages >/dev/null
     fi
@@ -95,7 +96,7 @@ function prepare_hugepages() {
     fi
 
     nr_pages=$(</sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages)
-    if [ $nr_pages -eq 0 ]; then
+    if [ $nr_pages -ne $NR_1GB_PAGES ]; then
         echo $NR_1GB_PAGES | sudo tee /sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages
     fi
 }
@@ -109,11 +110,14 @@ function prepare_network() {
 ###
 ###
 
-KERNEL_CMDLINE="nokaslr selinux=0 audit=0"
+KERNEL_CMDLINE="nokaslr kptr_restrict=1"
 function append_kernel_cmdline() {
     KERNEL_CMDLINE="$KERNEL_CMDLINE $*"
 }
+append_kernel_cmdline selinux=0 audit=0
 append_kernel_cmdline console=ttyS0 # earlyprintk=serial # 这个选项有啥作用
+append_kernel_cmdline crashkernel=2G-64G:256M,64G-:512M
+# append_kernel_cmdline kernel=/boot/vmlinuz-6.15.0-0.rc3.20250421git9d7a0577c9db.28.fc43.x86_64
 
 TRACE_ARGS=""
 function append_trace_args() {
@@ -238,7 +242,7 @@ append_kernel_cmdline iommu=pt intel_iommu=on
 # 2 个 socket，每个 core 2 个 thread，最多 hot-plug 到 16 个
 CPU_ARGS="
 -cpu host
--smp $CPUS,sockets=2,dies=1,clusters=1,threads=2,maxcpus=16
+-smp $CPUS,sockets=2,cores=1,dies=1,clusters=1,threads=2
 "
 
 # TODO MEM_SIZE/2
@@ -247,23 +251,31 @@ MEM_ARGS="
 -m $MEM_SIZE
 -object memory-backend-file,id=ram-node0,size=4G,mem-path=$HUGETLBFS,share=on,prealloc=off
 -object memory-backend-file,id=ram-node1,size=4G,mem-path=$HUGETLBFS,share=on,prealloc=off
--numa node,nodeid=0,cpus=0-1,cpus=4-9,memdev=ram-node0
--numa node,nodeid=1,cpus=2-3,cpus=10-15,memdev=ram-node1
+-numa node,nodeid=0,cpus=0-1,memdev=ram-node0
+-numa node,nodeid=1,cpus=2-3,memdev=ram-node1
 "
+# -numa node,nodeid=0,cpus=0-1,memdev=ram-node0
+# -numa node,nodeid=1,cpus=2-3,memdev=ram-node1
+
+# -numa node,nodeid=0,cpus=0,cpus=1,memdev=ram-node0
+# -numa node,nodeid=1,cpus=2,cpus=3,memdev=ram-node1
+
+# -numa node,nodeid=0,cpus=0-7,memdev=ram-node0
+# -numa node,nodeid=1,cpus=8-15,memdev=ram-node1
 
 NET_ARGS+="
 -netdev tap,id=net0,ifname=tap0,script=no,downscript=no,vhost=on
--device virtio-net-pci,netdev=net0,$VIRTIO_MODERN_OPTS,bus=pcie.0,addr=0x1.0
+-device virtio-net-pci,netdev=net0,$VIRTIO_MODERN_OPTS,bus=pcie.0,addr=0x2.0
 "
-NET_ARGS+="
--netdev tap,id=net1,ifname=tap1,script=no,downscript=no,vhost=on
--device virtio-net-pci,netdev=net1,$VIRTIO_MODERN_OPTS,bus=pcie.0,addr=0x2.0,iommu_platform=on
-"
+# NET_ARGS+="
+# -netdev tap,id=net1,ifname=tap1,script=no,downscript=no,vhost=on
+# -device virtio-net-pci,netdev=net1,$VIRTIO_MODERN_OPTS,bus=pcie.0,addr=0x2.0,iommu_platform=on
+# "
 
-DISK_ARGS+="
--blockdev driver=qcow2,node-name=disk1,file.driver=file,file.filename=$DISK1_FILE
--device virtio-blk-pci,drive=disk1,$VIRTIO_MODERN_OPTS,bus=pcie.0,addr=0x3.0
-"
+# DISK_ARGS+="
+# -blockdev driver=qcow2,node-name=disk1,file.driver=file,file.filename=$DISK1_FILE
+# -device virtio-blk-pci,drive=disk1,$VIRTIO_MODERN_OPTS,bus=pcie.0,addr=0x3.0
+# "
 # -drive if=virtio,format=qcow2,file=$DISK1_FILE
 
 VIRTIOFS_ARGS="
@@ -301,6 +313,7 @@ $QEMU
 -nodefaults
 -kernel $KERNEL
 -append '$KERNEL_CMDLINE'
+-device pcie-root-port,id=pcie.1,bus=pcie.0,port=1,chassis=1,slot=0,addr=0x1.0
 $UEFI_ARGS
 $MACHINE_ARGS
 $CPU_ARGS

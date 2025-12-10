@@ -33,6 +33,9 @@ npm install
 
 # https://vercel.com/docs/cli
 vercel dev
+
+# 更新依赖
+npm update
 ```
 
 https://vitepress.dev/zh/

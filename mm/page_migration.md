@@ -201,3 +201,45 @@ memmap_init_zone_range()
 # 查看各种迁移类型的页的分布情况
 $ cat /proc/pagetypeinfo
 ```
+
+## 代码分析
+
+- MIGRATE_ASYNC
+  - 异步迁移，过程中不会发生阻塞
+  - 场景：内存分配 slowpath
+- MIGRATE_SYNC_LIGHT
+  - 轻度同步迁移，允许大部分的阻塞操作，唯独不允许脏页的回写操作
+  - 场景：内存分配 slowpath、kcompactd 触发的规整
+- MIGRATE_SYNC
+  - 同步迁移，迁移过程会发生阻塞，若需要迁移的某个 page 正在 writeback 或被 locked 会等待它完成
+  - 场景：sysfs 主动触发的内存规整
+
+场景：
+
+- migrate_pages() Returns the number of {normal folio, large folio, hugetlb} that were not migrated, or an error code.
+
+Migratability of hugepages depends on architectures and their size.
+
+```cpp
+/* 传入链表要迁移的 folio 链表 from，未能成功被迁移的 folio 会保留在这个链表里，
+  */
+migrate_pages()
+  /*  */
+  migrate_hugetlbs()
+  if (mode == MIGRATE_ASYNC)
+    migrate_pages_batch()
+  else
+    migrate_pages_sync()
+
+migrate_pages_batch()
+  好几种情况
+  1. 如果在 _deferred_list 链表里，那就先 split
+
+
+migrate_folio()
+
+try_to_migrate_one()
+```
+
+- hugetlb 的页面迁移支持
+  - 2010-09-08 290408d4a250 hugetlb: hugepage migration core

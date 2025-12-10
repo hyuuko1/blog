@@ -1,0 +1,80 @@
+{
+    "editor.formatOnSave": false,
+    "editor.formatOnSaveMode": "modifications",
+    "editor.trimAutoWhitespace": false,
+    "editor.formatOnType": false,
+    "files.trimFinalNewlines": false,
+    "files.trimTrailingWhitespace": false,
+    //   "editor.detectIndentation": false,
+    "editor.tabSize": 8,
+    "editor.insertSpaces": false,
+    "[markdown]": {
+        "editor.tabSize": 8
+    },
+    // 隐藏一些文件
+    "files.exclude": {
+        "{arch,tools/perf/arch}/{arm,mips,ia64,alpha,arc,c6x,csky,h8300,hexagon,m68k,microblaze,nds32,nios2,openrisc,parisc,powerpc,s390,sh,sparc,um,xtensa}": true
+        // "fs/{9p,bfs,ecryptfs,nilfs2,openpromfs,qnx6,unicode,adfs,cramfs,gfs2,lockd,nls,orangefs,quota,sysv,vboxsf,affs,crypto,efs,f2fs,hfs,isofs,notify,verity,afs,ceph,erofs,hfsplus,jbd2,nfs,ntfs,reiserfs,ubifs,xfs,exfat,freevxfs,hostfs,jffs2,nfs_common,ocfs2,pstore,romfs,udf,zonefs,befs,coda,dlm,exportfs,hpfs,jfs,omfs,qnx4,squashfs,ufs}": true
+        // "**/.cache": true
+    },
+    //
+    "todo-tree.general.tags": [
+        "BUG",
+        "HACK",
+        "FIXME",
+        "TODO",
+        "XXX",
+        "- [ ]",
+        "NOTE",
+        "DKW", // Don't Know Why
+        "MNOTE", // My Note
+        "MTODO", // My TODO
+        "MBUG" // Maybe BUG
+    ],
+    "restructuredtext.languageServer.disabled": true,
+    "restructuredtext.linter.disabled": true,
+    "restructuredtext.preview.sphinx.disabled": true,
+    //
+    "clangd.arguments": [
+        /* compile_commands.json 所在目录 */
+        "--compile-commands-dir=out/x86_64" /* out/aarch64 */,
+        "--all-scopes-completion",
+        /* 在后台进行索引，并持久化在磁盘上的 .cache 目录 */
+        "--background-index",
+        // "--background-index-priority=normal",
+        "--clang-tidy",
+        /* 代码补全：对相似的条目进行合并 */
+        "--completion-style=bundled",
+        /* 没有 .clang-format 文件时，使用的风格 */
+        "--fallback-style=Google",
+        /* 函数补全时，在参数位置加占位符 */
+        "--function-arg-placeholders",
+        /* 支持添加头文件 */
+        "--header-insertion=iwyu",
+        /* 输入建议中，已包含头文件的项与还未包含头文件的项会以圆点加以区分 */
+        "--header-insertion-decorators",
+        /* 不限制 clangd 的返回结果数量 */
+        // "--limit-results=0", /* 默认 100 */
+        // "--limit-references=0", /* 默认 1000 */
+        // "--rename-file-limit=0", /* 默认 50 */
+        /* 在内存中存储 PCHs，性能更好 */
+        "--pch-storage=memory",
+        /* 从 YAML 文件中读取用户配置 */
+        "--enable-config",
+        // "--log=info",
+        // "--pretty",
+        "-j=32" /* 默认貌似是 8 */
+    ],
+    "todo-tree.tree.scanMode": "workspace only",
+    "[c]": {},
+    "clangd.checkUpdates": true,
+
+    /*  */
+
+    // Optional: Set this to an empty string to turn off the clangd.
+    // "clangd.path": "",
+
+    // Point this to the clice binary you downloaded.
+    "clice.executable": "/data/bin/clice/clice",
+    "clice.mode": "socket"
+}

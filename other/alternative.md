@@ -1,0 +1,1 @@
+- [Linux 内核 Alternative 机制介绍](https://mp.weixin.qq.com/s/PN8NKA8-XnHqUyQjDk7o3Q)

@@ -17,7 +17,8 @@
   - 为什么内核自身分配的 buffer 等内存被设备 DMA 前，无需 pin 呢？因为这些内存本就不会被回收或移动。
   - 场景
     - MSG_ZEROCOPY `tcp_sendmsg_locked()->skb_zerocopy_iter_stream()->__zerocopy_sg_from_iter()->zerocopy_fill_skb_from_iter()->iov_iter_get_pages2()->__iov_iter_get_pages_alloc()->get_user_pages_fast()`
-- 让内核能够安全、正确、高效地直接访问用户空间内存。函数调用后，用户内存对应的 struct page 指针记录在 pages 数组内，在 unpin 之前，内核都可以通过 struct page 得到对应的直接映射地址，安全高效地访问。
+    - vmsplice syscall
+- 让内核能够安全、正确、高效地直接访问用户空间内存。函数调用后，用户内存对应的 struct page 指针记录在 pages 数组内，在 unpin 之前，内核都可以通过 struct page 得到对应的直接映射地址，安全高效地访问。而无需 `copy_from/to_user()`
 
 GUP 涉及到
 
@@ -45,7 +46,7 @@ GUP 涉及到
 
 ### 为什么会涉及到 `faultin_page()` 缺页处理
 
-GUP 的核心目标是：获取并固定用户虚拟地址对应的物理页，供内核或设备长期访问。但用虚拟地址对应的物理页可能并不存在于内存中：
+GUP 的核心目标是：获取并固定用户虚拟地址对应的物理页，供内核或设备长期访问。但用户虚拟地址对应的物理页可能并不存在于内存中：
 
 - 尚未分配
 - 已 swap out
@@ -206,3 +207,112 @@ vfio 和 vhost-vdpa 调用 pin_user_pages 时，都用了这个 flag，
       因为对于所在 struct address_space 有 AS_UNEVICTABLE flag 的 folio 而言，该 folio 是 PG_unevictable 的。
 
 注意，`populate_vma_page_range()` 并未传入 FOLL_GET 或 FOLL_PIN 参数。
+
+## per-vma lock
+
+CONFIG_PER_VMA_LOCK
+
+release_fault_lock()
+
+## gup_flags
+
+存在只对内的、外部用户不该用的 flags，也就是 INTERNAL_GUP_FLAGS。
+比如调用 API 时，是不能直接指定 FOLL_PIN 的，必须得通过调用 `pin_xxx()` 来指定此 flag。
+
+实际上，FOLL_GET 是可以不指定的，直接用 `get_xxx()` 即可。
+
+```cpp
+/* include/linux/mm_types.h */
+enum {
+	/* check pte is writable */
+	FOLL_WRITE = 1 << 0,
+	/* do get_page on page */
+	FOLL_GET = 1 << 1,
+	/* give error on hole if it would be zero */
+	FOLL_DUMP = 1 << 2,
+	/* get_user_pages read/write w/o permission */
+	FOLL_FORCE = 1 << 3,
+	/*
+	 * if a disk transfer is needed, start the IO and return without waiting
+	 * upon it
+	 */
+	FOLL_NOWAIT = 1 << 4,
+	/* do not fault in pages */
+	FOLL_NOFAULT = 1 << 5,
+	/* check page is hwpoisoned */
+	FOLL_HWPOISON = 1 << 6,
+	/* don't do file mappings */
+	FOLL_ANON = 1 << 7,
+	/*
+	 * FOLL_LONGTERM indicates that the page will be held for an indefinite
+	 * time period _often_ under userspace control.  This is in contrast to
+	 * iov_iter_get_pages(), whose usages are transient.
+	 */
+	FOLL_LONGTERM = 1 << 8,
+	/* split huge pmd before returning */
+	FOLL_SPLIT_PMD = 1 << 9,
+	/* allow returning PCI P2PDMA pages */
+	FOLL_PCI_P2PDMA = 1 << 10,
+	/* allow interrupts from generic signals */
+	FOLL_INTERRUPTIBLE = 1 << 11,
+	/*
+	 * Always honor (trigger) NUMA hinting faults.
+	 *
+	 * FOLL_WRITE implicitly honors NUMA hinting faults because a
+	 * PROT_NONE-mapped page is not writable (exceptions with FOLL_FORCE
+	 * apply). get_user_pages_fast_only() always implicitly honors NUMA
+	 * hinting faults.
+	 */
+	FOLL_HONOR_NUMA_FAULT = 1 << 12,
+
+	/* See also internal only FOLL flags in mm/internal.h */
+};
+
+/* mm/internal.h
+   仅限 GUP 内部使用的 flags，外部用户不能用这个
+*/
+enum {
+	/* mark page accessed */
+	FOLL_TOUCH = 1 << 16,
+	/* a retry, previous pass started an IO */
+	FOLL_TRIED = 1 << 17,
+	/* we are working on non-current tsk/mm */
+	FOLL_REMOTE = 1 << 18,
+	/* pages must be released via unpin_user_page */
+	FOLL_PIN = 1 << 19,
+	/* gup_fast: prevent fall-back to slow gup */
+	FOLL_FAST_ONLY = 1 << 20,
+	/* allow unlocking the mmap lock */
+	FOLL_UNLOCKABLE = 1 << 21,
+	/* VMA lookup+checks compatible with MADV_POPULATE_(READ|WRITE) */
+	FOLL_MADV_POPULATE = 1 << 22,
+};
+```
+
+---
+
+**一些判断**
+
+- folio_maybe_dma_pinned()
+- folio_needs_cow_for_dma()
+- folio_is_longterm_pinnable()
+- folio_expected_ref_count()
+
+## GUP APIs
+
+- pin_user_pages
+  - caller 需要加锁
+- pin_user_pages_unlocked
+  - caller 无需加锁
+- pin_user_pages_remote
+- pin_user_pages_fast
+- get_user_pages
+- get_user_pages_unlocked
+- get_user_pages_remote
+- get_user_pages_fast
+- get_user_pages_fast_only
+
+## TODO
+
+- [ ] 和 CoW 存在哪些联系？
+      https://aistudio.google.com/prompts/1lMKm19zWhI2P0Wg616aXLV6a2SBWcuZj?save=true

@@ -5,10 +5,6 @@
 # 需下载 3GiB
 git clone https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
 
-# 包含 2.6.12-rc2 到 2.6.33-rc5 之前的 history，共 179995 个 commit
-# 673.95 MiB
-git clone https://git.kernel.org/pub/scm/linux/kernel/git/history/history.git
-
 # 克隆 linux-2.6.12-rc2 之前的，159.51 MiB
 git clone https://github.com/mpe/linux-fullhistory --single-branch -b linux-2.6.12-rc2
 ```

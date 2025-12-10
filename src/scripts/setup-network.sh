@@ -36,8 +36,8 @@ iptables -t nat -A POSTROUTING -s 10.0.0.0/24 -j MASQUERADE
 # iptables -t nat -D POSTROUTING 1
 
 # 虚拟机内
-# ip addr add 10.0.0.2/24 dev enp0s1
-# ip link set dev enp0s1 up
+# ip addr add 10.0.0.2/24 dev enp0s2
+# ip link set dev enp0s2 up
 # ip route add default via 10.0.0.1
 # export http_proxy=http://10.0.0.1:7897
 # export https_proxy=http://10.0.0.1:7897

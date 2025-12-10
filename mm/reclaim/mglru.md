@@ -1,6 +1,11 @@
-- [mglur 专题一： mglru tier 的概念 - 知乎](https://zhuanlan.zhihu.com/p/676536738?share_code=1g3SiiyvubWNX&utm_psn=1952093653536319069)
+- 憨乐牛牛漫谈内存
+  - [mglru 专题一： mglru tier 的概念 - 知乎](https://zhuanlan.zhihu.com/p/676536738?share_code=1g3SiiyvubWNX&utm_psn=1952093653536319069)
+  - [mglru 专题二： mglru gen 的概念 - 知乎](https://zhuanlan.zhihu.com/p/676731207)
+  - [mglru 专题三： mglru gen 和 min_seq - 知乎](https://zhuanlan.zhihu.com/p/677330013)
+  - [mglru 专题四：max_seq 和 gen - 知乎](https://zhuanlan.zhihu.com/p/677974444)
+  - [mglru 专题五：aging 概念 - 知乎](https://zhuanlan.zhihu.com/p/678929740)
 - [内存管理特性分析（十八）：MGLRU(Multi-Gen LRU)技术原理分析 - 知乎](https://zhuanlan.zhihu.com/p/669941990)
-
-https://lwn.net/Articles/851184/
-https://lwn.net/Articles/856931/
-https://lwn.net/Articles/894859/
+- LWN.net
+  - [The multi-generational LRU \[LWN.net\]](https://lwn.net/Articles/851184/)
+  - [Multi-generational LRU: the next generation \[LWN.net\]](https://lwn.net/Articles/856931/)
+  - [Merging the multi-generational LRU \[LWN.net\]](https://lwn.net/Articles/894859/)
