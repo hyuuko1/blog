@@ -1,0 +1,6 @@
+- 以下两选项都会启用 `CONFIG_NO_HZ_COMMON`，使得 `tick_nohz_enabled` 默认为 true，需要加参数 `nohz=off` 才能关闭
+  - `CONFIG_NO_HZ_IDLE` 当 cpu 空闲时，不 tick，但至少有一个 cpu 会 tick 以进行 timekeeping
+  - `CONFIG_NO_HZ_FULL`
+    - 需要使用 `nohz_full` 选择一个 cpu 范围，这范围内的 cpu 没有或者只有一个任务的时候不 tick。
+      - 不能选择所有的 cpu，因为至少要有一个 cpu 用于周期性的 timekeeping
+    - 如果不加 `nohz_full` 参数，那么行为和 `CONFIG_NO_HZ_IDLE` 一样
