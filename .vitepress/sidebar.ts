@@ -11,6 +11,11 @@ export function nav(): DefaultTheme.NavItem[] {
       activeMatch: "/process/",
     },
     {
+      text: "eBPF",
+      link: "/ebpf",
+      activeMatch: "/ebpf/",
+    },
+    {
       text: "调度",
       link: "/sched/index",
       activeMatch: "/sched/",
@@ -69,6 +74,10 @@ export function sidebar(): DefaultTheme.Sidebar {
     "/process/": {
       base: "/process/",
       items: sidebarProcess(),
+    },
+    "/ebpf/": {
+      base: "/ebpf/",
+      items: sidebarEBPF(),
     },
     "/sched/": {
       base: "/sched/",
@@ -294,6 +303,27 @@ function sidebarProcess(): DefaultTheme.SidebarItem[] {
       items: [
         { text: "CFS", link: "CFS" },
         { text: "EEVDF", link: "EEVDF" },
+      ],
+    },
+  ];
+}
+
+function sidebarEBPF(): DefaultTheme.SidebarItem[] {
+  return [
+    {
+      text: "sockops",
+      collapsed: false,
+      items: [
+        { text: "README", link: "sockops/README" },
+        { text: "introduction", link: "sockops/introduction" },
+        { text: "design-and-data", link: "sockops/design-and-data" },
+        { text: "operations", link: "sockops/operations" },
+        { text: "execution-flow", link: "sockops/execution-flow" },
+        { text: "header-options", link: "sockops/header-options" },
+        { text: "sockmap-integration", link: "sockops/sockmap-integration" },
+        { text: "debugging-and-tuning", link: "sockops/debugging-and-tuning" },
+        { text: "self-assessment", link: "sockops/self-assessment" },
+        { text: "advanced-topics", link: "sockops/advanced-topics" },
       ],
     },
   ];

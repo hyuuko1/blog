@@ -1,9 +1,10 @@
-/* 正文文本大小，使用浏览器的字体大小设置 */
-body {
-  font-size: initial;
-}
-html {
-  font-size: initial;
+body,
+html,
+.vp-doc p {
+  /* 正文文本大小，initial 是指使用浏览器的字体大小设置 */
+  /* font-size: initial; */
+  font-size: 14px;
+  line-height: 1.5em;
 }
 
 .vp-doc h2 {
@@ -23,16 +24,55 @@ html {
   font-size: 1em;
 }
 
-.vp-doc p {
-  /* line-height: 24px; */
-  line-height: 1.5em;
+/* 列表两行之间的间距 */
+.vp-doc li + li,
+.vp-doc li > ol,
+.vp-doc li > ul {
+  margin-top: 3px;
+}
+
+/* 列表左侧的 padding */
+.vp-doc ul,
+.vp-doc ol {
+  /* padding-left: 1.5rem; */
+  padding-left: 1.75rem;
+}
+
+/* 右侧目录 */
+.nested {
+  padding-right: 0px !important;
+  padding-left: 16px !important;
+}
+.outline-link {
+  font-size: 0.8em !important;
+  line-height: 2.5em !important;
+}
+
+/* <hr> 的间隔 */
+.vp-doc hr {
+  margin-top: 32px;
+  margin-bottom: 32px;
 }
 
 /* 有序列表的标号 */
 ol ::marker {
   font-family: monospace;
-  font-size: 1.1em;
+  font-size: 1em;
   font-weight: bold;
+}
+
+/* 链接 */
+.vp-doc a {
+  font-family: monospace;
+}
+
+/* 行内的代码 */
+.vp-doc :not(pre) > code {
+  border-radius: 3px;
+  padding: 1px 1px;
+  font-size: 0.95em;
+  line-height: 1.5em;
+  color: var(--vp-c-text-1);
 }
 
 :root {

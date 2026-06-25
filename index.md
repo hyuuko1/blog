@@ -29,6 +29,8 @@ features:
   - title: 网络
     link: /
     details: kernel TCP/IP stack, DPDK, RDMA, XDP
+  - title: eBPF
+    link: /ebpf
   - title: 存储
     link: /
     details: VFS, SPDK

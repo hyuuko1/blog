@@ -6,12 +6,17 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
-    "vitepress": "2.0.0-alpha.13"
-  },
-  "dependencies": {
     "dotenv": "^17.2.1",
-    "markdown-it-footnote": "latest",
-    "markdown-it-task-lists": "latest",
-    "vitepress-plugin-comment-with-giscus": "latest"
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-task-lists": "^2.1.1",
+    "mermaid": "^11.16.0",
+    "vitepress": "^2.0.0-alpha.17",
+    "vitepress-plugin-comment-with-giscus": "^1.1.15",
+    "vitepress-plugin-mermaid": "^2.0.17"
+  },
+  "overrides": {
+    "vitepress-plugin-mermaid": {
+      "vitepress": "$vitepress"
+    }
   }
 }
